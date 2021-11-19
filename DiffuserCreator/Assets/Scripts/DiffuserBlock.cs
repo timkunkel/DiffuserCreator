@@ -2,18 +2,12 @@ using UnityEngine;
 
 public class DiffuserBlock : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    public float Width  => transform.localScale.x;
+    public float Height => transform.localScale.y;
+    public float Depth  => transform.localScale.z;
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
+    public Vector2 BottomCenter => new Vector2(Width/2, Height/2);
+   
     public void SetSize(float width, float height, float depth)
     {
         transform.localScale = new Vector3(width, height, depth);
