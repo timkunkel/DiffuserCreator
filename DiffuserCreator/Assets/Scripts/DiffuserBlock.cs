@@ -7,6 +7,9 @@ public class DiffuserBlock : MonoBehaviour
     public float Height => transform.localScale.y;
     public float Depth  => transform.localScale.z;
 
+    [SerializeField]
+    private LayerMask _cuttingLayerMask;
+
     private MeshFilter _meshFilter;
 
     private void Awake()
@@ -14,31 +17,46 @@ public class DiffuserBlock : MonoBehaviour
         _meshFilter = GetComponent<MeshFilter>();
         CreateCube();
     }
-    
+
     public void SetSize(float width, float height, float depth)
     {
         transform.localScale = new Vector3(width, height, depth);
     }
 
-    public void CutWithSurface(CuttingSurface cuttingSurface)
+    public void CutWithSurface()
     {
-        CreateCube();
+        var layerMask = _cuttingLayerMask;
+
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.back), out hit, Mathf.Infinity,
+                            layerMask))
+        {
+            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.back) * hit.distance, Color.yellow);
+            // Debug.Log("Did Hit");
+        }
+        else
+        {
+            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.back) * 1000, Color.white);
+            // Debug.Log("Did not Hit");
+        }
+
+        // ToDo RayCast against cuttingPlane
     }
 
     private void CreateCube()
     {
         var points = new Vector3[8];
-        points[0] = new Vector3(0.5f,  -0.5f, 0.5f);
-        points[1] = new Vector3(0.5f,  0.5f,  0.5f);
-        points[2] = new Vector3(-0.5f, 0.5f,  0.5f);
-        points[3] = new Vector3(-0.5f, -0.5f, 0.5f);
+        points[0] = new Vector3(0.5f,  -0.5f, 0f);
+        points[1] = new Vector3(0.5f,  0.5f,  0f);
+        points[2] = new Vector3(-0.5f, 0.5f,  0f);
+        points[3] = new Vector3(-0.5f, -0.5f, 0f);
 
-        points[4] = new Vector3(0.5f,  -0.5f, -0.5f);
-        points[5] = new Vector3(0.5f,  0.5f,  -0.5f);
-        points[6] = new Vector3(-0.5f, 0.5f,  -0.5f);
-        points[7] = new Vector3(-0.5f, -0.5f, -0.5f);
+        points[4] = new Vector3(0.5f,  -0.5f, -1f);
+        points[5] = new Vector3(0.5f,  0.5f,  -1f);
+        points[6] = new Vector3(-0.5f, 0.5f,  -1f);
+        points[7] = new Vector3(-0.5f, -0.5f, -1f);
 
-        var vertices = new Vector3[]
+        Vector3[] vertices =
         {
             // back
             points[0], points[1], points[2], points[3],
@@ -87,5 +105,9 @@ public class DiffuserBlock : MonoBehaviour
         mesh.vertices  = vertices;
         mesh.triangles = triangles;
         mesh.RecalculateNormals();
+    }
+
+    private void OnDrawGizmos()
+    {
     }
 }

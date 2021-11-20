@@ -17,6 +17,9 @@ public class DiffuserGrid : MonoBehaviour
     [SerializeField]
     private DiffuserBlock _blockPrefab;
 
+    [SerializeField]
+    private CuttingSurface _cuttingSurface;
+
     private DiffuserBlock[,] _blocks;
 
     private float Width  => _columns * _blockWidth + ((_columns - 1) * _horizontalSpacing);
@@ -25,6 +28,21 @@ public class DiffuserGrid : MonoBehaviour
     void Start()
     {
         Generate();
+    }
+
+    private void Update()
+    {
+        CutCubes();
+    }
+
+    private void CutCubes()
+    {
+        if (!_cuttingSurface) { return; }
+
+        foreach (DiffuserBlock diffuserBlock in _blocks)
+        {
+            diffuserBlock.CutWithSurface();
+        }
     }
 
     public void Generate()
