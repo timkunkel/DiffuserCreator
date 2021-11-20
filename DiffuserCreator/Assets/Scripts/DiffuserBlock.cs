@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class DiffuserBlock : MonoBehaviour
 {
+    private const float DEFAULT_DEPTH = 1f;
+
     public float Width  => transform.localScale.x;
     public float Height => transform.localScale.y;
     public float Depth  => transform.localScale.z;
@@ -11,6 +13,8 @@ public class DiffuserBlock : MonoBehaviour
     private LayerMask _cuttingLayerMask;
 
     private MeshFilter _meshFilter;
+
+    private float _depth = DEFAULT_DEPTH;
 
     private void Awake()
     {
@@ -25,22 +29,22 @@ public class DiffuserBlock : MonoBehaviour
 
     public void CutWithSurface()
     {
-        var layerMask = _cuttingLayerMask;
-
         RaycastHit hit;
-        if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.back), out hit, Mathf.Infinity,
-                            layerMask))
+        if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.back), out hit,
+                            DEFAULT_DEPTH * Depth,
+                            _cuttingLayerMask))
         {
             Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.back) * hit.distance, Color.yellow);
             // Debug.Log("Did Hit");
+
+            _depth = -transform.InverseTransformPoint(hit.point).z;
+            CreateCube();
         }
         else
         {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.back) * 1000, Color.white);
-            // Debug.Log("Did not Hit");
+            _depth = DEFAULT_DEPTH;
+            CreateCube();
         }
-
-        // ToDo RayCast against cuttingPlane
     }
 
     private void CreateCube()
@@ -51,10 +55,10 @@ public class DiffuserBlock : MonoBehaviour
         points[2] = new Vector3(-0.5f, 0.5f,  0f);
         points[3] = new Vector3(-0.5f, -0.5f, 0f);
 
-        points[4] = new Vector3(0.5f,  -0.5f, -1f);
-        points[5] = new Vector3(0.5f,  0.5f,  -1f);
-        points[6] = new Vector3(-0.5f, 0.5f,  -1f);
-        points[7] = new Vector3(-0.5f, -0.5f, -1f);
+        points[4] = new Vector3(0.5f,  -0.5f, -_depth);
+        points[5] = new Vector3(0.5f,  0.5f,  -_depth);
+        points[6] = new Vector3(-0.5f, 0.5f,  -_depth);
+        points[7] = new Vector3(-0.5f, -0.5f, -_depth);
 
         Vector3[] vertices =
         {
