@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="MainMenu" style="justify-content: flex-start; align-items: flex-end; flex-direction: column; height: auto; width: auto;">
+        <ui:ScrollView scroll-deceleration-rate="0,135" elasticity="0,1" style="width: 30%;">
+            <ui:Slider picking-mode="Ignore" label="SpacingX" value="51.3" high-value="100" name="SpacingX" show-input-field="true" style="flex-direction: column;" />
+            <ui:Slider picking-mode="Ignore" label="SpacingY" value="42" high-value="100" name="SpacingY" show-input-field="true" style="flex-direction: column; align-items: stretch; justify-content: flex-start;" />
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>
