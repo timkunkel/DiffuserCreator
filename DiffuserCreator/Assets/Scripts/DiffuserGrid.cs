@@ -35,6 +35,7 @@ public class DiffuserGrid : MonoBehaviour
         CutCubes();
     }
 
+    [ContextMenu("Cut with Surface")]
     private void CutCubes()
     {
         if (!_cuttingSurface) { return; }
@@ -45,6 +46,7 @@ public class DiffuserGrid : MonoBehaviour
         }
     }
 
+    [ContextMenu("Generate Grid")]
     public void Generate()
     {
         _blocks = new DiffuserBlock[_rows, _columns];
