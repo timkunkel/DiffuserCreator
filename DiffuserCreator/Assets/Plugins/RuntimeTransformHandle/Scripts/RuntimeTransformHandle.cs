@@ -75,8 +75,13 @@ namespace RuntimeHandle
             if (_scaleHandle) _scaleHandle.Destroy();
         }
 
-        void Update()
+        public bool TryInteract()
         {
+            if (!gameObject.activeSelf)
+            {
+                return false;
+            }
+            
             if (autoScale)
                 transform.localScale =
                     Vector3.one * (Vector3.Distance(handleCamera.transform.position, transform.position) * autoScaleFactor) / 15;
@@ -123,6 +128,8 @@ namespace RuntimeHandle
             {
                 transform.rotation = Quaternion.identity;
             }
+
+            return handle != null;
         }
 
         void HandleOverEffect(HandleBase p_axis)

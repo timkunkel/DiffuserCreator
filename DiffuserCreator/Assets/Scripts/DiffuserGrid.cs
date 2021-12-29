@@ -49,6 +49,14 @@ public class DiffuserGrid : MonoBehaviour
     [ContextMenu("Generate Grid")]
     public void Generate()
     {
+        if (_blocks != null && _blocks.Length > 0)
+        {
+            foreach (DiffuserBlock block in _blocks)
+            {
+                Destroy(block.gameObject);
+            }
+        }
+        
         _blocks = new DiffuserBlock[_rows, _columns];
 
         float totalWidth  = Width;

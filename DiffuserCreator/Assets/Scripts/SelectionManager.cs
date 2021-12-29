@@ -26,9 +26,11 @@ public class SelectionManager : MonoBehaviour
 
     private void Awake()
     {
-        _transformHandle      = RuntimeTransformHandle.Create(transform, HandleType.POSITION);
-        _transformHandle.name = "TransformHandle";
-        _selectionLayer       = _blockLayer;
+        _transformHandle                      = RuntimeTransformHandle.Create(transform, HandleType.POSITION);
+        _transformHandle.name                 = "TransformHandle";
+        _transformHandle.transform.localScale = new Vector3(2, 2, 2);
+        _transformHandle.gameObject.SetActive(false);
+        _selectionLayer                       = _blockLayer;
     }
 
     // Start is called before the first frame update
@@ -44,7 +46,14 @@ public class SelectionManager : MonoBehaviour
         {
             return;
         }
+        
+        bool handleWasUsed = _transformHandle.TryInteract();
 
+        if (handleWasUsed)
+        {
+            return;
+        }
+        
         CheckHoveredSelectable();
         CheckForSelection();
     }
@@ -62,12 +71,24 @@ public class SelectionManager : MonoBehaviour
             {
                 _selectedSelectable = _hoveredSelectable;
                 _selectedSelectable.Select();
+                
+                ActivateTransformHandleForSelected();
             }
             else
             {
                 _selectedSelectable = null;
+                _transformHandle.gameObject.SetActive(false);
             }
         }
+    }
+
+    private void ActivateTransformHandleForSelected()
+    {
+        Transform selectedTransform = _selectedSelectable.transform;
+        _transformHandle.target             = null;
+        _transformHandle.transform.position = selectedTransform.position;
+        _transformHandle.target             = selectedTransform;
+        _transformHandle.gameObject.SetActive(true);
     }
 
     private void CheckHoveredSelectable()
