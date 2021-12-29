@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class DiffuserGrid : MonoBehaviour
 {
@@ -16,14 +17,13 @@ public class DiffuserGrid : MonoBehaviour
 
     [SerializeField]
     private DiffuserBlock _blockPrefab;
-
-    [SerializeField]
-    private CuttingSurface _cuttingSurface;
+    
+    public AnimationCurve Curve;
 
     private DiffuserBlock[,] _blocks;
 
-    private float Width  => _columns * _blockWidth + ((_columns - 1) * _horizontalSpacing);
-    private float Height => _rows * _blockHeight + ((_rows - 1) * _verticalSpacing);
+    public float Width  => _columns * _blockWidth + ((_columns - 1) * _horizontalSpacing);
+    public float Height => _rows * _blockHeight + ((_rows - 1) * _verticalSpacing);
 
     void Start()
     {
@@ -32,14 +32,21 @@ public class DiffuserGrid : MonoBehaviour
 
     private void Update()
     {
-        CutCubes();
+        //CutCubes();
+        //UpdateCurveCubes();
+    }
+
+    private void UpdateCurveCubes()
+    {
+        foreach (DiffuserBlock block in _blocks)
+        {
+            block.UpdateDepthWithCurve();
+        }
     }
 
     [ContextMenu("Cut with Surface")]
     private void CutCubes()
     {
-        if (!_cuttingSurface) { return; }
-
         foreach (DiffuserBlock diffuserBlock in _blocks)
         {
             diffuserBlock.CutWithSurface();
@@ -92,6 +99,7 @@ public class DiffuserGrid : MonoBehaviour
     {
         DiffuserBlock block = Instantiate(_blockPrefab, blockPosition, Quaternion.identity, transform);
         block.SetSize(_blockWidth, _blockHeight, _blockDepth);
+        block.Initialize(this, blockPosition);
         return block;
     }
 }

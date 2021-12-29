@@ -11,9 +11,15 @@ public class DiffuserBlock : MonoBehaviour
         Vertical
     }
 
+    public enum HeightEditing
+    {
+        Cutting, Curve
+    }
+
     private const float DEFAULT_DEPTH = 1f;
 
-    public HeightMode Mode = HeightMode.Middle;
+    public HeightMode    Mode        = HeightMode.Middle;
+    public HeightEditing EditingMode = HeightEditing.Cutting;
 
     public float Width  => transform.localScale.x;
     public float Height => transform.localScale.y;
@@ -31,6 +37,12 @@ public class DiffuserBlock : MonoBehaviour
     private MeshFilter   _meshFilter;
     private MeshCollider _collider;
 
+    private DiffuserGrid _diffuserGrid;
+    private Vector2      _positionInGrid;
+    private Vector2      _relativePosInGrid;
+
+    private float _initialDepth;
+    
     private void Awake()
     {
         _meshFilter = GetComponent<MeshFilter>();
@@ -40,13 +52,29 @@ public class DiffuserBlock : MonoBehaviour
         BuildMesh();
     }
 
+    public void Initialize(DiffuserGrid grid, Vector2 positionInGrid)
+    {
+        _diffuserGrid = grid;
+        var normalizedPos = new Vector2(positionInGrid.x + grid.Width / 2f, positionInGrid.y + grid.Height / 2f);
+        _positionInGrid   = normalizedPos;
+        _relativePosInGrid = new Vector2(_positionInGrid.x / grid.Width, _positionInGrid.y / grid.Height);
+        UpdateDepthWithCurve();
+        BuildMesh();
+    }
+
     public void SetSize(float width, float height, float depth)
     {
+        _initialDepth        = depth;
         transform.localScale = new Vector3(width, height, depth);
     }
 
     public void CutWithSurface()
     {
+        if (EditingMode != HeightEditing.Cutting)
+        {
+            return;
+        }
+
         RaycastHit hit;
 
         void SetDepthsBetweenIndices(int a, int b)
@@ -100,8 +128,8 @@ public class DiffuserBlock : MonoBehaviour
                 SetDepthsBetweenIndices(2, 3);
                 break;
             case HeightMode.Vertical:
-                SetDepthsBetweenIndices(0,3);
-                SetDepthsBetweenIndices(1,2);
+                SetDepthsBetweenIndices(0, 3);
+                SetDepthsBetweenIndices(1, 2);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -109,6 +137,18 @@ public class DiffuserBlock : MonoBehaviour
 
         ApplyDepthToPoints();
         BuildMesh();
+    }
+
+    public void UpdateDepthWithCurve()
+    {
+        if (EditingMode != HeightEditing.Curve)
+        {
+            return;
+        }
+        
+        float value = _diffuserGrid.Curve.Evaluate(_relativePosInGrid.x);
+        Debug.LogError("depth: " + value, this);
+        SetDepth(_initialDepth + value * _initialDepth);
     }
 
     private bool RaycastAgainstCuttingObjects(Vector3 origin, out RaycastHit hit)
