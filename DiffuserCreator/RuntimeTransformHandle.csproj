@@ -13,11 +13,11 @@
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <RootNamespace></RootNamespace>
-    <ProjectGuid>{4fba3a20-df39-1bc6-be3b-c78a8f8000a8}</ProjectGuid>
+    <ProjectGuid>{d42ca14d-e536-c9f4-a01c-9408fa62eff3}</ProjectGuid>
     <ProjectTypeGuids>{E097FAD1-6243-4DAD-9C02-E9B9EFC3FFC1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <AssemblyName>Assembly-CSharp</AssemblyName>
+    <AssemblyName>RuntimeTransformHandle</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <BaseDirectory>.</BaseDirectory>
@@ -52,12 +52,23 @@
     <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
   </PropertyGroup>
   <ItemGroup>
-     <Compile Include="Assets\Scripts\CuttingSurface.cs" />
-     <Compile Include="Assets\Scripts\DiffuserBlock.cs" />
-     <Compile Include="Assets\Scripts\DiffuserGrid.cs" />
-     <Compile Include="Assets\Scripts\SelectionManager.cs" />
-     <Compile Include="Assets\Scripts\Selectable.cs" />
-     <None Include="Assets\MainMenu.uxml" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\Position\PositionPlane.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\HandleType.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Utils\MeshUtils.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\Scale\ScaleHandle.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\Scale\ScaleAxis.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\HandleAxes.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\HandleSnappingType.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\Position\PositionAxis.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\Rotation\RotationAxis.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\HandleBase.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\Rotation\RotationHandle.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\Scale\ScaleGlobal.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\Position\PositionHandle.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\RuntimeTransformHandle.cs" />
+     <Compile Include="Assets\Plugins\RuntimeTransformHandle\Scripts\Handles\HandleSpace.cs" />
+     <None Include="Assets\Plugins\RuntimeTransformHandle\RuntimeTransformHandle.asmdef" />
+     <None Include="Assets\Plugins\RuntimeTransformHandle\Shaders\HandleShader.shader" />
  <Reference Include="UnityEngine">
  <HintPath>C:/Program Files/Unity/Hub/Editor/2020.3.20f1/Editor/Data/Managed/UnityEngine/UnityEngine.dll</HintPath>
  </Reference>
@@ -279,6 +290,24 @@
  </Reference>
  <Reference Include="UnityEditor.UnityConnectModule">
  <HintPath>C:/Program Files/Unity/Hub/Editor/2020.3.20f1/Editor/Data/Managed/UnityEngine/UnityEditor.UnityConnectModule.dll</HintPath>
+ </Reference>
+ <Reference Include="UnityEditor.Graphs">
+ <HintPath>C:/Program Files/Unity/Hub/Editor/2020.3.20f1/Editor/Data/Managed/UnityEditor.Graphs.dll</HintPath>
+ </Reference>
+ <Reference Include="UnityEditor.WindowsStandalone.Extensions">
+ <HintPath>C:/Program Files/Unity/Hub/Editor/2020.3.20f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll</HintPath>
+ </Reference>
+ <Reference Include="Unity.Plastic.Newtonsoft.Json">
+ <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/PackageCache/com.unity.collab-proxy@1.15.4/Lib/Editor/PlasticSCM/Unity.Plastic.Newtonsoft.Json.dll</HintPath>
+ </Reference>
+ <Reference Include="Unity.Plastic.Antlr3.Runtime">
+ <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/PackageCache/com.unity.collab-proxy@1.15.4/Lib/Editor/PlasticSCM/Unity.Plastic.Antlr3.Runtime.dll</HintPath>
+ </Reference>
+ <Reference Include="unityplastic">
+ <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/PackageCache/com.unity.collab-proxy@1.15.4/Lib/Editor/PlasticSCM/unityplastic.dll</HintPath>
+ </Reference>
+ <Reference Include="log4netPlastic">
+ <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/PackageCache/com.unity.collab-proxy@1.15.4/Lib/Editor/PlasticSCM/log4netPlastic.dll</HintPath>
  </Reference>
  <Reference Include="Newtonsoft.Json">
  <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/PackageCache/com.unity.nuget.newtonsoft-json@2.0.0/Runtime/Newtonsoft.Json.dll</HintPath>
@@ -628,45 +657,14 @@
  <Reference Include="System.Xml.Serialization">
  <HintPath>C:/Program Files/Unity/Hub/Editor/2020.3.20f1/Editor/Data/NetStandard/compat/2.0.0/shims/netfx/System.Xml.Serialization.dll</HintPath>
  </Reference>
- <Reference Include="Unity.VSCode.Editor">
- <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.VSCode.Editor.dll</HintPath>
- </Reference>
- <Reference Include="Unity.TextMeshPro.Editor">
- <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
- </Reference>
- <Reference Include="Unity.VisualStudio.Editor">
- <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.VisualStudio.Editor.dll</HintPath>
- </Reference>
- <Reference Include="Unity.Timeline.Editor">
- <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
- </Reference>
- <Reference Include="Unity.Timeline">
- <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.Timeline.dll</HintPath>
- </Reference>
- <Reference Include="Unity.TextMeshPro">
- <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.TextMeshPro.dll</HintPath>
- </Reference>
  <Reference Include="UnityEditor.UI">
  <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/UnityEditor.UI.dll</HintPath>
- </Reference>
- <Reference Include="Unity.PlasticSCM.Editor">
- <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.PlasticSCM.Editor.dll</HintPath>
- </Reference>
- <Reference Include="Unity.Rider.Editor">
- <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.Rider.Editor.dll</HintPath>
- </Reference>
- <Reference Include="UnityEditor.UIBuilderModule">
- <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/UnityEditor.UIBuilderModule.dll</HintPath>
  </Reference>
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/_dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/UnityEngine.UI.dll</HintPath>
  </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="RuntimeTransformHandle.csproj">
-      <Project>{d42ca14d-e536-c9f4-a01c-9408fa62eff3}</Project>
-      <Name>RuntimeTransformHandle</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.

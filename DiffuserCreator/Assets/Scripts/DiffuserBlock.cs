@@ -28,11 +28,13 @@ public class DiffuserBlock : MonoBehaviour
 
     private float[] _depth = new float[4];
 
-    private MeshFilter _meshFilter;
+    private MeshFilter   _meshFilter;
+    private MeshCollider _collider;
 
     private void Awake()
     {
         _meshFilter = GetComponent<MeshFilter>();
+        _collider   = GetComponent<MeshCollider>();
         SetDepth(DEFAULT_DEPTH);
         InitPoints();
         BuildMesh();
@@ -124,6 +126,8 @@ public class DiffuserBlock : MonoBehaviour
         mesh.vertices  = Vertices;
         mesh.triangles = Triangles;
         mesh.RecalculateNormals();
+
+        _collider.sharedMesh = mesh;
     }
 
     private static int[] Triangles => new[]
