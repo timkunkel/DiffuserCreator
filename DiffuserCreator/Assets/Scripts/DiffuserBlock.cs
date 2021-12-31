@@ -13,7 +13,7 @@ public class DiffuserBlock : MonoBehaviour
 
     public enum HeightEditing
     {
-        Cutting, Curve
+        Cutting, Curve, Custom
     }
 
     private const float DEFAULT_DEPTH = 1f;
@@ -28,6 +28,8 @@ public class DiffuserBlock : MonoBehaviour
     [SerializeField]
     private LayerMask _cuttingLayerMask;
 
+    private bool _useHorizontalCurve, _useVerticalCurve;
+
     private Vector3[] _points       = new Vector3[8];
     private Vector3[] _bottomPoints = new Vector3[4];
     private Vector3[] _topPoints    = new Vector3[4];
@@ -41,8 +43,11 @@ public class DiffuserBlock : MonoBehaviour
     private Vector2      _positionInGrid;
     private Vector2      _relativePosInGrid;
 
+    private AnimationCurve _horizontalCurve;
+    private AnimationCurve _verticalCurve;
+
     private float _initialDepth;
-    
+
     private void Awake()
     {
         _meshFilter = GetComponent<MeshFilter>();
@@ -52,12 +57,18 @@ public class DiffuserBlock : MonoBehaviour
         BuildMesh();
     }
 
-    public void Initialize(DiffuserGrid grid, Vector2 positionInGrid)
+    public void Initialize(
+        DiffuserGrid grid, Vector2 positionInGrid, AnimationCurve horizontalCurve, AnimationCurve verticalCurve)
     {
         _diffuserGrid = grid;
         var normalizedPos = new Vector2(positionInGrid.x + grid.Width / 2f, positionInGrid.y + grid.Height / 2f);
-        _positionInGrid   = normalizedPos;
+        _positionInGrid    = normalizedPos;
         _relativePosInGrid = new Vector2(_positionInGrid.x / grid.Width, _positionInGrid.y / grid.Height);
+
+        _horizontalCurve    = horizontalCurve;
+        _verticalCurve      = verticalCurve;
+        _useHorizontalCurve = horizontalCurve != null;
+        _useVerticalCurve   = verticalCurve != null;
         UpdateDepthWithCurve();
         BuildMesh();
     }
@@ -145,10 +156,44 @@ public class DiffuserBlock : MonoBehaviour
         {
             return;
         }
-        
-        float value = _diffuserGrid.Curve.Evaluate(_relativePosInGrid.x);
-        Debug.LogError("depth: " + value, this);
+
+        float value = 0f;
+
+        if (_useHorizontalCurve)
+        {
+            value += _horizontalCurve.Evaluate(_relativePosInGrid.x);
+        }
+
+        if (_useVerticalCurve)
+        {
+            value += _verticalCurve.Evaluate(_relativePosInGrid.y);
+        }
+
+        if (_useHorizontalCurve && _useVerticalCurve)
+        {
+            // average of both curves
+            value /= 2f;
+        }
+
         SetDepth(_initialDepth + value * _initialDepth);
+    }
+
+    public void SetCurve(AnimationCurve curve, DiffuserBlockSequence.SequenceOrientation orientation)
+    {
+        switch (orientation)
+        {
+            case DiffuserBlockSequence.SequenceOrientation.Horizontal:
+                _horizontalCurve    = curve;
+                _useHorizontalCurve = true;
+                break;
+            case DiffuserBlockSequence.SequenceOrientation.Vertical:
+                _verticalCurve    = curve;
+                _useVerticalCurve = false;
+                break;
+            default: throw new ArgumentOutOfRangeException(nameof(orientation), orientation, null);
+        }
+
+        UpdateDepthWithCurve();
     }
 
     private bool RaycastAgainstCuttingObjects(Vector3 origin, out RaycastHit hit)

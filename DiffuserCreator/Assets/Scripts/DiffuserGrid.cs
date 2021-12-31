@@ -1,8 +1,5 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class DiffuserGrid : MonoBehaviour
 {
@@ -17,10 +14,14 @@ public class DiffuserGrid : MonoBehaviour
 
     [SerializeField]
     private DiffuserBlock _blockPrefab;
-    
-    public AnimationCurve Curve;
+
+    public AnimationCurve HorizontalCurve;
+    public AnimationCurve VerticalCurve;
 
     private DiffuserBlock[,] _blocks;
+
+    private DiffuserBlockSequence[] _blockRows;
+    private DiffuserBlockSequence[] _blockColumns;
 
     public float Width  => _columns * _blockWidth + ((_columns - 1) * _horizontalSpacing);
     public float Height => _rows * _blockHeight + ((_rows - 1) * _verticalSpacing);
@@ -63,7 +64,7 @@ public class DiffuserGrid : MonoBehaviour
                 Destroy(block.gameObject);
             }
         }
-        
+
         _blocks = new DiffuserBlock[_rows, _columns];
 
         float totalWidth  = Width;
@@ -93,13 +94,52 @@ public class DiffuserGrid : MonoBehaviour
 
             currentVerticalSpacing += _verticalSpacing;
         }
+
+
+        _blockRows    = new DiffuserBlockSequence[_rows];
+        _blockColumns = new DiffuserBlockSequence[_columns];
+        for (int i = 0; i < _rows; i++)
+        {
+            _blockRows[i] = new DiffuserBlockSequence(GetBlocksFromRow(i),
+                                                      DiffuserBlockSequence.SequenceOrientation.Horizontal,
+                                                      HorizontalCurve);
+        }
+
+        for (int i = 0; i < _columns; i++)
+        {
+            _blockColumns[i] = new DiffuserBlockSequence(GetBlocksFromColumn(i),
+                                                         DiffuserBlockSequence.SequenceOrientation.Vertical,
+                                                         VerticalCurve);
+        }
     }
 
     private DiffuserBlock CreateBlock(Vector2 blockPosition)
     {
         DiffuserBlock block = Instantiate(_blockPrefab, blockPosition, Quaternion.identity, transform);
         block.SetSize(_blockWidth, _blockHeight, _blockDepth);
-        block.Initialize(this, blockPosition);
+        block.Initialize(this, blockPosition, HorizontalCurve, VerticalCurve);
         return block;
+    }
+
+    public DiffuserBlock[] GetBlocksFromRow(int rowIndex)
+    {
+        var blocksInRow = new DiffuserBlock[_columns];
+        for (int i = 0; i < _columns; i++)
+        {   
+            blocksInRow[i] = _blocks[rowIndex, i];
+        }
+
+        return blocksInRow;
+    }
+
+    public DiffuserBlock[] GetBlocksFromColumn(int columnIndex)
+    {
+        var blocksInColumn = new DiffuserBlock[_rows];
+        for (int i = 0; i < _rows; i++)
+        {
+            blocksInColumn[i] = _blocks[i, columnIndex];
+        }
+
+        return blocksInColumn;
     }
 }

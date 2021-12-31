@@ -57,6 +57,7 @@
      <Compile Include="Assets\Scripts\DiffuserGrid.cs" />
      <Compile Include="Assets\Scripts\Selectable.cs" />
      <Compile Include="Assets\Scripts\SelectionManager.cs" />
+     <Compile Include="Assets\Scripts\DiffuserBlockSequence.cs" />
      <None Include="Assets\MainMenu.uxml" />
  <Reference Include="UnityEngine">
  <HintPath>C:/Program Files/Unity/Hub/Editor/2020.3.24f1/Editor/Data/Managed/UnityEngine/UnityEngine.dll</HintPath>
@@ -631,8 +632,14 @@
  <Reference Include="Unity.VSCode.Editor">
  <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.VSCode.Editor.dll</HintPath>
  </Reference>
+ <Reference Include="Unity.ProBuilder.AssetIdRemapUtility">
+ <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.ProBuilder.AssetIdRemapUtility.dll</HintPath>
+ </Reference>
  <Reference Include="Unity.TextMeshPro.Editor">
  <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
+ </Reference>
+ <Reference Include="Unity.ProBuilder.AddOns.Editor">
+ <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.ProBuilder.AddOns.Editor.dll</HintPath>
  </Reference>
  <Reference Include="Unity.VisualStudio.Editor">
  <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.VisualStudio.Editor.dll</HintPath>
@@ -645,6 +652,12 @@
  </Reference>
  <Reference Include="Unity.TextMeshPro">
  <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.TextMeshPro.dll</HintPath>
+ </Reference>
+ <Reference Include="Unity.ProBuilder">
+ <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.ProBuilder.dll</HintPath>
+ </Reference>
+ <Reference Include="Unity.ProBuilder.Editor">
+ <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.ProBuilder.Editor.dll</HintPath>
  </Reference>
  <Reference Include="UnityEditor.UI">
  <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/UnityEditor.UI.dll</HintPath>
@@ -660,18 +673,6 @@
  </Reference>
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/UnityEngine.UI.dll</HintPath>
- </Reference>
- <Reference Include="Unity.ProBuilder">
- <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.ProBuilder.dll</HintPath>
- </Reference>
- <Reference Include="Unity.ProBuilder.AddOns.Editor">
- <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.ProBuilder.AddOns.Editor.dll</HintPath>
- </Reference>
- <Reference Include="Unity.ProBuilder.Editor">
- <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.ProBuilder.Editor.dll</HintPath>
- </Reference>
- <Reference Include="Unity.ProBuilder.AssetIdRemapUtility">
- <HintPath>C:/Users/tim/dev/DiffusorCreator/DiffuserCreator/Library/ScriptAssemblies/Unity.ProBuilder.AssetIdRemapUtility.dll</HintPath>
  </Reference>
   </ItemGroup>
   <ItemGroup>
