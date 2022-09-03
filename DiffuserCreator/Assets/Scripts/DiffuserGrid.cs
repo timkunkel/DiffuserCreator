@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
 public class DiffuserGrid : MonoBehaviour
@@ -199,9 +200,43 @@ public class DiffuserGrid : MonoBehaviour
         {
             for (int j = 0; j < _blocks.GetLength(1); j++)
             {
-                var block    = _blocks[i, j];
+                var block = _blocks[i, j];
                 block.transform.Rotate(Vector3.back, 90);
             }
         }
+    }
+
+    [ContextMenu("Save as Mesh")]
+    public void SaveAsMesh()
+    {
+        MeshFilter[] meshFilters = GetComponentsInChildren<MeshFilter>();
+        var          combine     = new CombineInstance[meshFilters.Length];
+
+        for (int i = 0; i < meshFilters.Length; i++)
+        {
+            combine[i].mesh      = meshFilters[i].sharedMesh;
+            combine[i].transform = meshFilters[i].transform.localToWorldMatrix;
+        }
+
+        var mesh = new Mesh();
+        mesh.CombineMeshes(combine);
+
+        //ObjExporter.DoExport(true);
+        SaveMesh(mesh, "Diffusor_generated", true, false);
+    }
+    
+    public static void SaveMesh (Mesh mesh, string name, bool makeNewInstance, bool optimizeMesh) {
+        string path = EditorUtility.SaveFilePanel("Save Separate Mesh Asset", "Assets/GeneratedMesh", name, "asset");
+        if (string.IsNullOrEmpty(path)) return;
+        
+        path = FileUtil.GetProjectRelativePath(path);
+
+        Mesh meshToSave = (makeNewInstance) ? Object.Instantiate(mesh) as Mesh : mesh;
+		
+        if (optimizeMesh)
+            MeshUtility.Optimize(meshToSave);
+        
+        AssetDatabase.CreateAsset(meshToSave, path);
+        AssetDatabase.SaveAssets();
     }
 }

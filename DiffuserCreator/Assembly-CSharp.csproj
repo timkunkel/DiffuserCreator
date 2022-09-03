@@ -42,13 +42,14 @@
   </PropertyGroup>
   <ItemGroup>
      <Compile Include="Assets\Scripts\CuttingSurface.cs" />
+     <Compile Include="Assets\Scripts\VertexIndicator.cs" />
      <Compile Include="Assets\Scripts\DiffuserBlockSequence.cs" />
      <Compile Include="Assets\Scripts\SelectableBlock.cs" />
      <Compile Include="Assets\Scripts\SelectionManager.cs" />
+     <Compile Include="Assets\Scripts\CameraLookAt.cs" />
      <Compile Include="Assets\Scripts\DiffuserBlock.cs" />
      <Compile Include="Assets\Scripts\DiffuserGrid.cs" />
-     <Compile Include="Assets\Scripts\VertexIndicator.cs" />
-     <Compile Include="Assets\Scripts\CameraLookAt.cs" />
+     <Compile Include="Assets\Scripts\ObjExporterScript.cs" />
      <None Include="Assets\TextMesh Pro\Shaders\TMPro.cginc" />
      <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Overlay.shader" />
      <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap.shader" />
@@ -804,6 +805,18 @@
      </Reference>
      <Reference Include="UnityEngine.Advertisements.Editor">
      <HintPath>C:\Users\tim\dev\DiffusorCreator\DiffuserCreator\Library\ScriptAssemblies\UnityEngine.Advertisements.Editor.dll</HintPath>
+     </Reference>
+     <Reference Include="Autodesk.Fbx">
+     <HintPath>C:\Users\tim\dev\DiffusorCreator\DiffuserCreator\Library\ScriptAssemblies\Autodesk.Fbx.dll</HintPath>
+     </Reference>
+     <Reference Include="Autodesk.Fbx.Editor">
+     <HintPath>C:\Users\tim\dev\DiffusorCreator\DiffuserCreator\Library\ScriptAssemblies\Autodesk.Fbx.Editor.dll</HintPath>
+     </Reference>
+     <Reference Include="Unity.Formats.Fbx.Editor">
+     <HintPath>C:\Users\tim\dev\DiffusorCreator\DiffuserCreator\Library\ScriptAssemblies\Unity.Formats.Fbx.Editor.dll</HintPath>
+     </Reference>
+     <Reference Include="Unity.Formats.Fbx.Runtime">
+     <HintPath>C:\Users\tim\dev\DiffusorCreator\DiffuserCreator\Library\ScriptAssemblies\Unity.Formats.Fbx.Runtime.dll</HintPath>
      </Reference>
   </ItemGroup>
   <ItemGroup>
