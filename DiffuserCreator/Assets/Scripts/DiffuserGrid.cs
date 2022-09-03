@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -24,6 +25,8 @@ public class DiffuserGrid : MonoBehaviour
     public AnimationCurve VerticalCurve;
     public bool           UseDioganalCurve;
     public AnimationCurve DioganalCurve;
+
+    public int SnapAngle = 5;
 
     private DiffuserBlock[,] _blocks;
 
@@ -153,5 +156,39 @@ public class DiffuserGrid : MonoBehaviour
     public enum CurveMode
     {
         Height, Angle
+    }
+
+    [ContextMenu("Print Grid")]
+    public void PrintGrid()
+    {
+        Dictionary<int, List<DiffuserBlock>> dic = new Dictionary<int, List<DiffuserBlock>>();
+        foreach (DiffuserBlock diffuserBlock in _blocks)
+        {
+            if (!dic.ContainsKey(diffuserBlock.Angle))
+            {
+                dic[diffuserBlock.Angle] = new List<DiffuserBlock>();
+            }
+
+            dic[diffuserBlock.Angle].Add(diffuserBlock);
+        }
+
+        foreach (int dicKey in dic.Keys)
+        {
+            Debug.LogError("Angle " + dicKey + ": " + dic[dicKey].Count);
+        }
+    }
+
+    [ContextMenu("Offset X")]
+    public void OffsetX()
+    {
+        for (int i = 0; i < _blocks.GetLength(0); i += 2)
+        {
+            for (int j = 0; j < _blocks.GetLength(1); j++)
+            {
+                var block    = _blocks[i, j];
+                var localPos = block.transform.localPosition;
+                block.transform.localPosition = new Vector3(localPos.x + 0.5f, localPos.y, localPos.z);
+            }
+        }
     }
 }

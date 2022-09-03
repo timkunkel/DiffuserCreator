@@ -55,6 +55,13 @@ public class DiffuserBlock : MonoBehaviour
 
     private VertexIndicator[] _indicators;
 
+    public int Angle
+    {
+        get;
+        private set;
+    }
+
+
     private void Awake()
     {
         _meshFilter = GetComponent<MeshFilter>();
@@ -184,7 +191,6 @@ public class DiffuserBlock : MonoBehaviour
     private void SetDepthWithAngleCurve()
     {
         float horizontalAngle = 0f;
-        float verticalAngle   = 0f;
         int   curveCount      = 0;
 
         if (_useDioganalCurve)
@@ -192,11 +198,13 @@ public class DiffuserBlock : MonoBehaviour
             curveCount++;
             horizontalAngle += _dioganalCurve.Evaluate((_relativePosInGrid.x + _relativePosInGrid.y) / 2f);
         }
+
         if (_useHorizontalCurve)
         {
             curveCount++;
             horizontalAngle += _horizontalCurve.Evaluate(_relativePosInGrid.x);
         }
+
         if (_useVerticalCurve)
         {
             curveCount++;
@@ -208,9 +216,12 @@ public class DiffuserBlock : MonoBehaviour
             horizontalAngle /= curveCount;
         }
 
+        Debug.LogError("Angle" + horizontalAngle);
+        Angle = (int)Snapping.Snap(horizontalAngle, _diffuserGrid.SnapAngle);
+
         SetDepth(_initialDepth);
         Vector3 dir1 = _points[5] - _points[4];
-        Vector3 dir2 = Quaternion.Euler(horizontalAngle, 0, 0) * dir1;
+        Vector3 dir2 = Quaternion.Euler(Angle, 0, 0) * dir1;
         LineLineIntersection(out Vector3 intersection, _points[4], dir2, _points[1], _points[5] - _points[1]);
         float magnitude = (_points[5] - intersection).magnitude;
         Debug.LogError("Magnitude " + magnitude);
