@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.ProBuilder;
 
 public class DiffuserBlock : MonoBehaviour
 {
@@ -28,7 +29,10 @@ public class DiffuserBlock : MonoBehaviour
     [SerializeField]
     private LayerMask _cuttingLayerMask;
 
-    private bool _useHorizontalCurve, _useVerticalCurve;
+    [SerializeField]
+    private VertexIndicator _vertexIndicatorPrefab;
+
+    private bool _useHorizontalCurve, _useVerticalCurve, _useDioganalCurve;
 
     private Vector3[] _points       = new Vector3[8];
     private Vector3[] _bottomPoints = new Vector3[4];
@@ -45,8 +49,11 @@ public class DiffuserBlock : MonoBehaviour
 
     private AnimationCurve _horizontalCurve;
     private AnimationCurve _verticalCurve;
+    private AnimationCurve _dioganalCurve;
 
     private float _initialDepth;
+
+    private VertexIndicator[] _indicators;
 
     private void Awake()
     {
@@ -58,7 +65,10 @@ public class DiffuserBlock : MonoBehaviour
     }
 
     public void Initialize(
-        DiffuserGrid grid, Vector2 positionInGrid, AnimationCurve horizontalCurve, AnimationCurve verticalCurve)
+        DiffuserGrid           grid, Vector2 positionInGrid, AnimationCurve horizontalCurve,
+        AnimationCurve         verticalCurve,
+        AnimationCurve         diagonalCurve,
+        DiffuserGrid.CurveMode curveMode)
     {
         _diffuserGrid = grid;
         var normalizedPos = new Vector2(positionInGrid.x + grid.Width / 2f, positionInGrid.y + grid.Height / 2f);
@@ -67,9 +77,11 @@ public class DiffuserBlock : MonoBehaviour
 
         _horizontalCurve    = horizontalCurve;
         _verticalCurve      = verticalCurve;
-        _useHorizontalCurve = horizontalCurve != null;
-        _useVerticalCurve   = verticalCurve != null;
-        UpdateDepthWithCurve();
+        _dioganalCurve      = diagonalCurve;
+        _useHorizontalCurve = grid.UseHorizontalCurve;
+        _useVerticalCurve   = grid.UseVerticalCurve;
+        _useDioganalCurve   = grid.UseDioganalCurve;
+        UpdateDepthWithCurve(curveMode);
         BuildMesh();
     }
 
@@ -150,13 +162,65 @@ public class DiffuserBlock : MonoBehaviour
         BuildMesh();
     }
 
-    public void UpdateDepthWithCurve()
+    public void UpdateDepthWithCurve(DiffuserGrid.CurveMode curveMode)
     {
         if (EditingMode != HeightEditing.Curve)
         {
             return;
         }
 
+        switch (curveMode)
+        {
+            case DiffuserGrid.CurveMode.Height:
+                SetDepthWithHeightCurve();
+                break;
+            case DiffuserGrid.CurveMode.Angle:
+                SetDepthWithAngleCurve();
+                break;
+            default: throw new ArgumentOutOfRangeException(nameof(curveMode), curveMode, null);
+        }
+    }
+
+    private void SetDepthWithAngleCurve()
+    {
+        float horizontalAngle = 0f;
+        float verticalAngle   = 0f;
+        int   curveCount      = 0;
+
+        if (_useDioganalCurve)
+        {
+            curveCount++;
+            horizontalAngle += _dioganalCurve.Evaluate((_relativePosInGrid.x + _relativePosInGrid.y) / 2f);
+        }
+        if (_useHorizontalCurve)
+        {
+            curveCount++;
+            horizontalAngle += _horizontalCurve.Evaluate(_relativePosInGrid.x);
+        }
+        if (_useVerticalCurve)
+        {
+            curveCount++;
+            horizontalAngle += _verticalCurve.Evaluate(_relativePosInGrid.y);
+        }
+
+        if (curveCount > 0)
+        {
+            horizontalAngle /= curveCount;
+        }
+
+        SetDepth(_initialDepth);
+        Vector3 dir1 = _points[5] - _points[4];
+        Vector3 dir2 = Quaternion.Euler(horizontalAngle, 0, 0) * dir1;
+        LineLineIntersection(out Vector3 intersection, _points[4], dir2, _points[1], _points[5] - _points[1]);
+        float magnitude = (_points[5] - intersection).magnitude;
+        Debug.LogError("Magnitude " + magnitude);
+        float moreDepth = _initialDepth + magnitude;
+
+        SetDepth(_initialDepth, _initialDepth, moreDepth, moreDepth);
+    }
+
+    private void SetDepthWithHeightCurve()
+    {
         float value = 0f;
 
         if (_useHorizontalCurve)
@@ -175,10 +239,12 @@ public class DiffuserBlock : MonoBehaviour
             value /= 2f;
         }
 
-        SetDepth(_initialDepth + value * _initialDepth);
+        float depthValue = _initialDepth + value * _initialDepth;
+        SetDepth(depthValue);
     }
 
-    public void SetCurve(AnimationCurve curve, DiffuserBlockSequence.SequenceOrientation orientation)
+    public void SetCurve(
+        AnimationCurve curve, DiffuserBlockSequence.SequenceOrientation orientation, DiffuserGrid.CurveMode curveMode)
     {
         switch (orientation)
         {
@@ -193,7 +259,7 @@ public class DiffuserBlock : MonoBehaviour
             default: throw new ArgumentOutOfRangeException(nameof(orientation), orientation, null);
         }
 
-        UpdateDepthWithCurve();
+        UpdateDepthWithCurve(curveMode);
     }
 
     private bool RaycastAgainstCuttingObjects(Vector3 origin, out RaycastHit hit)
@@ -304,7 +370,64 @@ public class DiffuserBlock : MonoBehaviour
         _points[7] = new Vector3(-0.5f, -0.5f, -_depth[3]);
     }
 
+    public static bool LineLineIntersection(
+        out Vector3 intersection, Vector3 linePoint1,
+        Vector3     lineVec1,     Vector3 linePoint2, Vector3 lineVec2)
+    {
+        Vector3 lineVec3      = linePoint2 - linePoint1;
+        Vector3 crossVec1and2 = Vector3.Cross(lineVec1, lineVec2);
+        Vector3 crossVec3and2 = Vector3.Cross(lineVec3, lineVec2);
+
+        float planarFactor = Vector3.Dot(lineVec3, crossVec1and2);
+
+        //is coplanar, and not parallel
+        if (Mathf.Abs(planarFactor) < 0.0001f
+            && crossVec1and2.sqrMagnitude > 0.0001f)
+        {
+            float s = Vector3.Dot(crossVec3and2, crossVec1and2)
+                      / crossVec1and2.sqrMagnitude;
+            intersection = linePoint1 + (lineVec1 * s);
+            return true;
+        }
+        else
+        {
+            intersection = Vector3.zero;
+            return false;
+        }
+    }
+
+    public void ShowIndicators()
+    {
+        if (_indicators == null)
+        {
+            _indicators = new VertexIndicator[_points.Length];
+            for (int i = 0; i < _points.Length; i++)
+            {
+                var             point     = _points[i];
+                VertexIndicator indicator = Instantiate(_vertexIndicatorPrefab, transform);
+                indicator.transform.localPosition = point;
+                indicator.SetIndex(i);
+                _indicators[i] = indicator;
+            }
+        }
+
+        foreach (VertexIndicator vertexIndicator in _indicators)
+        {
+            vertexIndicator.gameObject.SetActive(true);
+        }
+    }
+
     private void OnDrawGizmos()
     {
+    }
+
+    public void HideIndicators()
+    {
+        if (_indicators == null) { return; }
+
+        foreach (VertexIndicator vertexIndicator in _indicators)
+        {
+            vertexIndicator.gameObject.SetActive(false);
+        }
     }
 }

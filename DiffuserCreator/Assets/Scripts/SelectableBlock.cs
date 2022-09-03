@@ -2,13 +2,16 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Selectable : MonoBehaviour
+public class SelectableBlock : MonoBehaviour
 {
     [SerializeField]
     private Renderer _renderer;
 
     [SerializeField]
     private Material _selectedMaterial, _hoveredMaterial;
+
+    [SerializeField]
+    private DiffuserBlock _block;
 
     private Material _originalMaterial;
 
@@ -44,6 +47,7 @@ public class Selectable : MonoBehaviour
     {
         _isSelected        = false;
         _renderer.material = _originalMaterial;
+        _block.HideIndicators();
     }
 
     public void Hover()
@@ -52,6 +56,7 @@ public class Selectable : MonoBehaviour
         if (!_isSelected)
         {
             _renderer.material = _hoveredMaterial;
+            _block.ShowIndicators();
         }
     }
 
@@ -61,6 +66,7 @@ public class Selectable : MonoBehaviour
         if (!_isSelected)
         {
             _renderer.material = _originalMaterial;
+            _block.HideIndicators();
         }
     }
         

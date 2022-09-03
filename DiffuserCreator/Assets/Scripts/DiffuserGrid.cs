@@ -15,8 +15,15 @@ public class DiffuserGrid : MonoBehaviour
     [SerializeField]
     private DiffuserBlock _blockPrefab;
 
+    [Header("Curve")]
+    public CurveMode SelectedCurveMode;
+
+    public bool           UseHorizontalCurve;
     public AnimationCurve HorizontalCurve;
+    public bool           UseVerticalCurve;
     public AnimationCurve VerticalCurve;
+    public bool           UseDioganalCurve;
+    public AnimationCurve DioganalCurve;
 
     private DiffuserBlock[,] _blocks;
 
@@ -41,7 +48,7 @@ public class DiffuserGrid : MonoBehaviour
     {
         foreach (DiffuserBlock block in _blocks)
         {
-            block.UpdateDepthWithCurve();
+            block.UpdateDepthWithCurve(SelectedCurveMode);
         }
     }
 
@@ -102,14 +109,14 @@ public class DiffuserGrid : MonoBehaviour
         {
             _blockRows[i] = new DiffuserBlockSequence(GetBlocksFromRow(i),
                                                       DiffuserBlockSequence.SequenceOrientation.Horizontal,
-                                                      HorizontalCurve);
+                                                      HorizontalCurve, SelectedCurveMode);
         }
 
         for (int i = 0; i < _columns; i++)
         {
             _blockColumns[i] = new DiffuserBlockSequence(GetBlocksFromColumn(i),
                                                          DiffuserBlockSequence.SequenceOrientation.Vertical,
-                                                         VerticalCurve);
+                                                         VerticalCurve, SelectedCurveMode);
         }
     }
 
@@ -117,7 +124,7 @@ public class DiffuserGrid : MonoBehaviour
     {
         DiffuserBlock block = Instantiate(_blockPrefab, blockPosition, Quaternion.identity, transform);
         block.SetSize(_blockWidth, _blockHeight, _blockDepth);
-        block.Initialize(this, blockPosition, HorizontalCurve, VerticalCurve);
+        block.Initialize(this, blockPosition, HorizontalCurve, VerticalCurve, DioganalCurve, SelectedCurveMode);
         return block;
     }
 
@@ -125,7 +132,7 @@ public class DiffuserGrid : MonoBehaviour
     {
         var blocksInRow = new DiffuserBlock[_columns];
         for (int i = 0; i < _columns; i++)
-        {   
+        {
             blocksInRow[i] = _blocks[rowIndex, i];
         }
 
@@ -141,5 +148,10 @@ public class DiffuserGrid : MonoBehaviour
         }
 
         return blocksInColumn;
+    }
+
+    public enum CurveMode
+    {
+        Height, Angle
     }
 }

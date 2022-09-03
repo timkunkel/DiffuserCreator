@@ -15,7 +15,7 @@ public class SelectionManager : MonoBehaviour
     [SerializeField]
     private LayerMask _selectionLayer;
 
-    private Selectable _hoveredSelectable, _selectedSelectable;
+    private SelectableBlock _hoveredSelectableBlock, _selectedSelectableBlock;
 
     private Camera _mainCamera;
 
@@ -62,21 +62,21 @@ public class SelectionManager : MonoBehaviour
     {
         if (Input.GetMouseButtonUp(0))
         {
-            if (_selectedSelectable)
+            if (_selectedSelectableBlock)
             {
-                _selectedSelectable.Deselect();
+                _selectedSelectableBlock.Deselect();
             }
 
-            if (_hoveredSelectable && _hoveredSelectable != _selectedSelectable)
+            if (_hoveredSelectableBlock && _hoveredSelectableBlock != _selectedSelectableBlock)
             {
-                _selectedSelectable = _hoveredSelectable;
-                _selectedSelectable.Select();
+                _selectedSelectableBlock = _hoveredSelectableBlock;
+                _selectedSelectableBlock.Select();
                 
                 ActivateTransformHandleForSelected();
             }
             else
             {
-                _selectedSelectable = null;
+                _selectedSelectableBlock = null;
                 _transformHandle.gameObject.SetActive(false);
             }
         }
@@ -84,7 +84,7 @@ public class SelectionManager : MonoBehaviour
 
     private void ActivateTransformHandleForSelected()
     {
-        Transform selectedTransform = _selectedSelectable.transform;
+        Transform selectedTransform = _selectedSelectableBlock.transform;
         _transformHandle.target             = null;
         _transformHandle.transform.position = selectedTransform.position;
         _transformHandle.target             = selectedTransform;
@@ -96,30 +96,30 @@ public class SelectionManager : MonoBehaviour
         Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(ray, out RaycastHit hit, 10000, _selectionLayer))
         {
-            var selectable = hit.collider.gameObject.GetComponent<Selectable>();
+            var selectable = hit.collider.gameObject.GetComponent<SelectableBlock>();
             if (!selectable)
             {
-                if (_hoveredSelectable)
+                if (_hoveredSelectableBlock)
                 {
-                    _hoveredSelectable.Unhover();
-                    _hoveredSelectable = null;
+                    _hoveredSelectableBlock.Unhover();
+                    _hoveredSelectableBlock = null;
                 }
 
                 return;
             }
 
-            if (_hoveredSelectable && _hoveredSelectable != selectable)
+            if (_hoveredSelectableBlock && _hoveredSelectableBlock != selectable)
             {
-                _hoveredSelectable.Unhover();
+                _hoveredSelectableBlock.Unhover();
             }
 
-            _hoveredSelectable = selectable;
-            _hoveredSelectable.Hover();
+            _hoveredSelectableBlock = selectable;
+            _hoveredSelectableBlock.Hover();
         }
-        else if (_hoveredSelectable)
+        else if (_hoveredSelectableBlock)
         {
-            _hoveredSelectable.Unhover();
-            _hoveredSelectable = null;
+            _hoveredSelectableBlock.Unhover();
+            _hoveredSelectableBlock = null;
         }
     }
 }
