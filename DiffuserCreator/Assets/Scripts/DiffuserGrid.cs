@@ -191,4 +191,17 @@ public class DiffuserGrid : MonoBehaviour
             }
         }
     }
+
+    [ContextMenu("Rotate 90°")]
+    private void Rotate90()
+    {
+        for (int i = 0; i < _blocks.GetLength(0); i++)
+        {
+            for (int j = 0; j < _blocks.GetLength(1); j++)
+            {
+                var block    = _blocks[i, j];
+                block.transform.Rotate(Vector3.back, 90);
+            }
+        }
+    }
 }
