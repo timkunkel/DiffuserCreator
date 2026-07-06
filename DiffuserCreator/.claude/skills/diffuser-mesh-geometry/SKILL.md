@@ -1,15 +1,17 @@
 ---
 name: diffuser-mesh-geometry
-description: The hand-built geometry of a DiffuserBlock — the 8 corner points, the 24-vertex / 12-triangle layout and winding, how the four per-corner depths deform the front face, and the line-line-intersection math that tilts the face for Angle curves. Load this BEFORE editing mesh construction, vertex/triangle arrays, normals, depth application, or the angle-tilt calculation, or when a block renders inside-out, has seams, or the angle mode looks wrong.
+description: The hand-built geometry of a DiffuserBlock — the 8 corner points, the 24-vertex / 12-triangle layout and winding, how the four per-corner depths deform the front face, and the line-line-intersection math (now in GeometryUtils, called by CurveDepthShaper) that tilts the face for Angle curves. Load this BEFORE editing mesh construction, vertex/triangle arrays, normals, depth application, or the angle-tilt calculation, or when a block renders inside-out, has seams, or Angle mode looks wrong.
 ---
 
 # DiffuserBlock Mesh & Geometry
 
-`DiffuserBlock` ([DiffuserBlock.cs](../../../Assets/Scripts/DiffuserBlock.cs)) builds its mesh by hand rather than deforming a Unity primitive, because each of the four front-face corners moves independently and the collider must match exactly. Verified 2026-07-06 against `master`. All coordinates are **local** to the block; `transform.localScale` (set by `SetSize`) scales the unit cube to world size, so geometry math never touches world units.
+`DiffuserBlock` ([DiffuserBlock.cs](../../../Assets/Scripts/DiffuserBlock.cs)) builds its mesh by hand rather than deforming a Unity primitive, because each of the four front-face corners moves independently and the collider must match exactly. Verified 2026-07-06 against `master` on Unity 6000.3.9f1. All coordinates are **local** to the block; `transform.localScale` (set by `SetSize`) scales the unit cube to world size, so geometry math never touches world units.
+
+The block is now pure geometry — it exposes `SetUniformDepth(float)` and `SetDepths(d0,d1,d2,d3)` (both apply + rebuild), `InitialDepth`, `NormalizedPosition`, `Angle`, and the static `BackCorners`. It does not decide depths; a `DepthShaper` does (see `diffuser-architecture`).
 
 ## The 8 corner points
 
-`InitPoints()` fills `_points[0..7]`. The **back face** (z = 0, against the mounting plane) and the **front face** (z = −depth, pushed toward the viewer):
+`InitPoints()` sets the **back face** (z = 0, against the mounting plane) from `BackCorners`; `ApplyDepthToPoints()` derives the **front face** (z = −depth):
 
 | Index | Local XY | Z | Corner |
 |---|---|---|---|
@@ -22,17 +24,13 @@ description: The hand-built geometry of a DiffuserBlock — the 8 corner points,
 | 6 | (−0.5,  0.5) | −`_depth[2]` | front top-left |
 | 7 | (−0.5, −0.5) | −`_depth[3]` | front bottom-left |
 
-So `_depth[i]` corresponds to `_points[4 + i]`, and the four depths map to corners **BR, TR, TL, BL** in that order. `_bottomPoints` = back face (0-3), `_topPoints` = front face (4-7) — the names refer to depth start/end, not up/down.
+So `_depth[i]` corresponds to `_points[4 + i]`, and the four depths map to corners **BR, TR, TL, BL** in that order. `public static readonly Vector3[] BackCorners` holds points 0-3 and is the single source both the mesh and `CuttingDepthShaper` (ray origins) use.
 
-Depth flows into geometry through two setters that both call `ApplyDepthToPoints()` (which recomputes `_points[4..7]` from `_depth`):
-- `SetDepth(float d)` → all four equal.
-- `SetDepth(d0,d1,d2,d3)` → per corner.
-
-`CutWithSurface` and the curve methods only ever write `_depth` and then `BuildMesh()`; they never touch `_points[0..3]`.
+`SetDepths`/`SetUniformDepth` write `_depth`, call `ApplyDepthToPoints()`, then `BuildMesh()`. Nothing ever moves points 0-3.
 
 ## The 24-vertex / 12-triangle box
 
-`BuildMesh()` assigns `Vertices` (24 entries) and `Triangles` (36 indices), then `RecalculateNormals()` and copies the mesh to the `MeshCollider`. Vertices are **duplicated per face** (4 per face × 6 faces) so each face gets flat normals — this is why there are 24 vertices for 8 corners.
+`BuildMesh()` assigns `Vertices` (24 entries) and `Triangles` (36 indices), then `RecalculateNormals()` and copies the mesh to the `MeshCollider`. Vertices are **duplicated per face** (4 per face × 6 faces) so each face gets flat normals — hence 24 vertices for 8 corners.
 
 `Vertices` face order and which points feed each face:
 
@@ -45,7 +43,7 @@ Depth flows into geometry through two setters that both call `ApplyDepthToPoints
 | top | 16-19 | p1 p2 p5 p6 |
 | bottom | 20-23 | p0 p3 p4 p7 |
 
-`Triangles` indexes into those 24 slots (two triangles per face). The winding per face is chosen so normals face outward after `RecalculateNormals()`:
+`Triangles` indexes into those 24 slots (two triangles per face). Winding is chosen so normals face outward after `RecalculateNormals()`:
 
 ```
 back:   0 1 2 / 0 2 3
@@ -56,29 +54,29 @@ top:   17 16 18 / 17 18 19
 bottom:20 21 23 / 20 23 22
 ```
 
-**If a block renders inside-out or a face is missing:** the winding for that face block is wrong or the vertex slots don't match the table above. Note back and front use *opposite* winding (front is reversed) because they face opposite directions. `RecalculateNormals()` means you fix orientation by fixing *winding*, not by editing normals.
+**If a block renders inside-out or a face is missing:** the winding for that face is wrong or the vertex slots don't match the table. Back and front use *opposite* winding (front reversed) because they face opposite directions. `RecalculateNormals()` means you fix orientation by fixing *winding*, not by editing normals.
 
-## Angle mode — tilting the front face
+## Angle mode — tilting the front face (in CurveDepthShaper)
 
-`SetDepthWithAngleCurve()` is the subtle part. Goal: instead of just making the block deeper, tilt its front face by a snapped angle so neighboring blocks form a continuous faceted curve.
+The tilt math lives in `CurveDepthShaper.ShapeWithAngle` ([DepthShaper.cs](../../../Assets/Scripts/DepthShaper.cs)), not the block. Goal: instead of just deepening the block, tilt its front face by a snapped angle so neighboring blocks form a continuous faceted curve.
 
-1. Accumulate a target angle from the enabled curves (diagonal evaluated at `(relX+relY)/2`, horizontal at `relX`, vertical at `relY`), averaged over the count of enabled curves.
-2. `Angle = (int)Snapping.Snap(horizontalAngle, _diffuserGrid.SnapAngle)` — snap to a multiple of `SnapAngle` degrees (ProBuilder `UnityEngine.ProBuilder.Snapping`, `public int Angle { get; private set; }` is read by `DiffuserGrid.PrintGrid` to histogram angles).
-3. Reset to a flat `_initialDepth`, then take the right-edge front vector `dir1 = _points[5] − _points[4]`, rotate it by `Angle` about X (`Quaternion.Euler(Angle,0,0) * dir1`), and use `LineLineIntersection` to find where the rotated edge meets the plane through `_points[1]`/`_points[5]`. The distance from `_points[5]` to that intersection is the extra depth `moreDepth`.
-4. `SetDepth(_initialDepth, _initialDepth, moreDepth, moreDepth)` — corners BR/TR stay at initial depth, TL/BL go to `moreDepth`, so the face tilts across the block.
+1. Accumulate a target angle from the enabled curves (diagonal at `(x+y)/2`, horizontal at `x`, vertical at `y`), averaged over the enabled count.
+2. `angle = (int)Snapping.Snap(angleValue, Mathf.Max(1, settings.SnapAngle))` — snap to a multiple of `SnapAngle` degrees (ProBuilder `UnityEngine.ProBuilder.Snapping`). Stored in `block.Angle` (read by `DiffuserGrid.PrintGrid` to histogram angles). Note the `Max(1, …)` guard against a zero snap step.
+3. Compute the front right-edge from the block's **initial depth** analytically (`frontBottom`/`frontTop` at `z = −InitialDepth`, `backTopRight` at `z = 0`), rotate the edge by `angle` about X, and use `GeometryUtils.LineLineIntersection` to find where the rotated edge meets the plane through the back/front top-right corners. The distance from the front-top corner to that intersection is the extra depth.
+4. `block.SetDepths(initial, initial, initial + extra, initial + extra)` — corners BR/TR stay at initial depth, TL/BL go deeper, so the face tilts across the block. **If the lines don't intersect** (`LineLineIntersection` returns false), it falls back to `block.SetUniformDepth(initial)` instead of applying a bogus depth — this guard is deliberate; the original prototype ignored the return value and produced a garbage depth from a `Vector3.zero` non-intersection.
 
-`LineLineIntersection(out intersection, p1, v1, p2, v2)` is a standard coplanar-lines solver: returns false (and `Vector3.zero`) when the lines are parallel or non-coplanar (`|planarFactor| >= 0.0001` or near-zero cross product). **If angle mode produces a zero or garbage depth, check its return value** — the current caller ignores it, so a non-intersection silently yields `moreDepth = _initialDepth + |p5 - zero|`, a large bogus depth. This is a real fragility to fix when refactoring.
+`GeometryUtils.LineLineIntersection` ([GeometryUtils.cs](../../../Assets/Scripts/GeometryUtils.cs)) is a standard coplanar-lines solver: returns false (and `Vector3.zero`) when the lines are parallel or non-coplanar (`|planarFactor| >= 0.0001` or near-zero cross product).
 
-`SetDepthWithHeightCurve()` is the easy sibling: one flat depth `_initialDepth + value * _initialDepth`, no geometry.
+`CurveDepthShaper.ShapeWithHeight` is the easy sibling: one flat depth `InitialDepth + value * InitialDepth`, no geometry.
 
 ## Vertex indicators
 
-`ShowIndicators()` lazily instantiates one `VertexIndicator` per `_points` entry (8 total) at the point's local position, labeled with its index; `HideIndicators()` deactivates them. Useful when debugging which corner a depth maps to — turn them on and compare against the point table above.
+`ShowIndicators()` lazily instantiates one `VertexIndicator` per `_points` entry (8 total) at the point's local position, labeled with its index (guarded against a null `_vertexIndicatorPrefab`); `HideIndicators()` deactivates them. Turn them on to see which corner a depth maps to and compare against the point table.
 
 ## When NOT to use this skill
 
-- Where depths come from (modes, curves, sequences) → `diffuser-architecture`.
-- Clicking buttons, exporting the mesh → `diffuser-editor-workflows`.
+- Where depths come from (strategies, curves, settings) → `diffuser-architecture`.
+- Clicking buttons, the UI panel, exporting → `diffuser-editor-workflows`.
 - ProBuilder dependency / build gotchas → `diffuser-build-and-run`.
 
 ## Provenance and maintenance
@@ -86,10 +84,11 @@ bottom:20 21 23 / 20 23 22
 Verified 2026-07-06 against `master` HEAD `93b81d8`. Re-verify:
 
 ```powershell
-# Point table, vertex/triangle arrays
-Select-String -Path "Assets\Scripts\DiffuserBlock.cs" -Pattern "InitPoints|Vertices =>|Triangles =>|ApplyDepthToPoints"
-# Angle tilt + intersection
-Select-String -Path "Assets\Scripts\DiffuserBlock.cs" -Pattern "SetDepthWithAngleCurve|LineLineIntersection|Snapping.Snap"
+# Point table, vertex/triangle arrays, depth API
+Select-String -Path "Assets\Scripts\DiffuserBlock.cs" -Pattern "InitPoints|Vertices =>|Triangles =>|ApplyDepthToPoints|BackCorners|SetDepths"
+# Angle tilt + intersection (now in the shaper + util)
+Select-String -Path "Assets\Scripts\DepthShaper.cs" -Pattern "ShapeWithAngle|Snapping.Snap|LineLineIntersection"
+Select-String -Path "Assets\Scripts\GeometryUtils.cs" -Pattern "LineLineIntersection"
 ```
 
 If output contradicts this file, trust the code and update this skill in the same change.

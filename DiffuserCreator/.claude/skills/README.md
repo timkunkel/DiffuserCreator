@@ -6,13 +6,25 @@ Working knowledge of this project for engineers and AI sessions with no prior co
 
 | Your situation | Load first |
 |---|---|
-| Understanding what the tool does, how a grid becomes blocks, depth modes, curves, sequences | `diffuser-architecture` |
-| Touching mesh construction, vertex/triangle layout, depth math, the angle-curve intersection | `diffuser-mesh-geometry` |
-| Actually using the tool: context menus, cutting surface, curve setup, selection handles, export | `diffuser-editor-workflows` |
-| Opening the project, Unity/package versions, editor-only-code gotchas, PDFsharp, known traps | `diffuser-build-and-run` |
+| Understanding what the tool does, how a grid becomes blocks, the shaper strategy, curves | `diffuser-architecture` |
+| Touching mesh construction, vertex/triangle layout, depth math, the angle-tilt intersection | `diffuser-mesh-geometry` |
+| Actually using the tool: context menus, cutting surface, curve setup, the runtime UI panel, export | `diffuser-editor-workflows` |
+| Opening/compiling the project, Unity/package versions, serialization traps, offline compile check | `diffuser-build-and-run` |
 
 ## The one-paragraph model
 
-`DiffuserGrid` (a `MonoBehaviour` on `DiffuserGrid.prefab`) spawns an `_rows × _columns` grid of `DiffuserBlock` prefab instances. Each `DiffuserBlock` builds its **own** mesh at runtime: a cube whose four front-face corners are pushed out to independent depths. Those depths come from one of three `HeightEditing` modes — `Cutting` (raycast against a `CuttingSurface` collider), `Curve` (evaluate `AnimationCurve`s by the block's normalized grid position, in `Height` or `Angle` `CurveMode`), or `Custom` (manual). The visible surface of the whole wall is therefore a sculpted relief that both scatters sound and looks intentional. Meshes can be combined and exported as an OBJ, a Unity mesh `.asset`, or FBX.
+`DiffuserGrid` (a `MonoBehaviour`) spawns an `_rows × _columns` grid of `DiffuserBlock` prefab instances and delegates their depth to a **`DepthShaper`** strategy. A `DiffuserBlock` is now a *dumb* geometry object: a cube whose four front-face corners are pushed to independent depths, owning only its mesh, collider, and vertex indicators. The chosen `DepthShaper` (`CuttingDepthShaper`, `CurveDepthShaper`, or `ManualDepthShaper`, picked by the grid's `DepthSource`) computes those depths from a `DiffuserSettings` snapshot the grid builds each rebuild — `Cutting` raycasts against a `CuttingSurface` collider, `Curve` evaluates `AnimationCurve`s by the block's normalized grid position (in `Height` or `Angle` `CurveMode`), `Manual` leaves them flat. The visible wall is a sculpted relief that both scatters sound and looks intentional. A runtime **`DiffuserControlPanel`** (UI Toolkit) exposes every setting for live tweaking; meshes can be exported as OBJ / mesh `.asset` / FBX.
 
-Authored 2026-07-06 from the repo at `master` HEAD `93b81d8`. Maintenance rule: when you change block/grid geometry or field names, re-run the skill's "Provenance and maintenance" commands and update it in the same change.
+## Layer map
+
+| Layer | Files |
+|---|---|
+| Data | `DiffuserSettings.cs` (enums `HeightMode`/`DepthSource`/`CurveMode` + settings snapshot) |
+| Geometry | `DiffuserBlock.cs`, `GeometryUtils.cs` |
+| Behavior | `DepthShaper.cs` (`CuttingDepthShaper`, `CurveDepthShaper`, `ManualDepthShaper`) |
+| Orchestration | `DiffuserGrid.cs` |
+| Presentation | `UI/DiffuserControlPanel.cs`, `Editor/DiffuserControlPanelSetup.cs` |
+| Runtime selection | `SelectionManager.cs`, `SelectableBlock.cs`, `VertexIndicator.cs`, `CameraLookAt.cs` |
+| Export | `ObjExporterScript.cs`, `DiffuserGrid.SaveAsMesh` |
+
+Authored 2026-07-06 from the repo at `master` HEAD `93b81d8`, on **Unity 6000.3.9f1** (the project was upgraded from 2022.1.15f1 during resurrection). Maintenance rule: when you change block/grid geometry, the shaper contract, or field names, re-run the skill's "Provenance and maintenance" commands and update it in the same change.

@@ -1,73 +1,80 @@
 ---
 name: diffuser-editor-workflows
-description: How to actually operate DiffuserCreator in the Unity editor — the DiffuserGrid ContextMenu actions (Generate/Cut/Rotate/Offset/Print/Save), how to set up a CuttingSurface, how to configure curves and snap angle, the runtime block selection/gizmo, and the three export paths (OBJ, mesh .asset, FBX). Load this when someone asks "how do I generate/regenerate the wall" / "how do I carve it with a surface" / "how do I export the result".
+description: How to actually operate DiffuserCreator — the DiffuserGrid ContextMenu actions (Generate/Reshape/Rotate/Offset/Print/Save), how to set up a CuttingSurface, how to configure curves and snap angle, the runtime UI Toolkit control panel (and its one-click editor setup), and the three export paths (OBJ, mesh .asset, FBX). Load this when someone asks "how do I generate/regenerate the wall" / "how do I carve it with a surface" / "how do I tweak it at runtime" / "how do I export the result".
 ---
 
 # DiffuserCreator Editor Workflows
 
-This is the operator's manual: the buttons, the setup, the outputs. Verified 2026-07-06 against `master`. The scene is `Assets/Scenes/MainScene.unity`; the tool lives on `DiffuserGrid.prefab` with child `DiffuserBlock`/`CuttingSurface`/`VertexIndicator` prefabs in `Assets/Prefabs/`.
+The operator's manual: the buttons, the setup, the outputs. Verified 2026-07-06 against `master` on Unity 6000.3.9f1. The scene is `Assets/Scenes/MainScene.unity`; the tool lives on `DiffuserGrid.prefab` with child `DiffuserBlock`/`CuttingSurface`/`VertexIndicator` prefabs in `Assets/Prefabs/`.
 
-## Generating the wall
+## Generating and reshaping the wall
 
-`DiffuserGrid` inspector fields drive everything: `_rows`, `_columns`, `_horizontalSpacing`, `_verticalSpacing`, `_blockWidth/Height/Depth`, `_blockPrefab`, the curve toggles/curves, `SelectedCurveMode`, and `SnapAngle`.
+`DiffuserGrid` inspector fields drive everything: `_rows`, `_columns`, spacings, block `_blockWidth/Height/Depth`, `_blockPrefab`, `_depthSource`, `_heightMode`, `_cuttingLayerMask`, `_defaultDepth`, the curve toggles/curves, `SelectedCurveMode`, `SnapAngle`.
 
-`DiffuserGrid` `[ContextMenu]` actions (right-click the component header in the Inspector):
-- **Generate Grid** (`Generate`) — (re)builds the whole grid. Also runs automatically in `Start()` on Play. Destroys existing blocks first, so it's safe to press repeatedly.
-- **Cut with Surface** (`CutCubes`) — calls `CutWithSurface()` on every block. Only blocks whose `EditingMode == Cutting` respond.
-- **Rotate 90°** (`Rotate90`) — rotates every block 90° about `Vector3.back`.
-- **Offset X** (`OffsetX`) — shifts every *other* row (step of 2) by +0.5 in local X, for a brick-style stagger.
-- **Print Grid** (`PrintGrid`) — histograms blocks by their snapped `Angle` and logs the count per angle (used to sanity-check how many distinct facet angles a design needs). Currently logs via `Debug.LogError` — noisy but harmless.
-- **Save as Mesh** (`SaveAsMesh`) — see Export below.
+Two rebuild verbs:
+- **Generate** — full rebuild: destroys and re-instantiates all blocks, re-lays them out, then reshapes. Needed after changing grid size, block size, or spacing. Runs automatically in `Start()`.
+- **Reshape** — keeps the existing blocks and only recomputes their depths with the current `DepthSource` + settings. Enough for depth-source, height-mode, curve-mode, curve-toggle, snap-angle, or default-depth changes.
+
+`DiffuserGrid` `[ContextMenu]` actions (right-click the component header):
+- **Generate Grid** (`Generate`)
+- **Reshape Blocks** (`Reshape`) — applies whichever `DepthSource` is selected (this replaces the old separate "Cut with Surface" / "Update Curves" menus).
+- **Offset X** (`OffsetX`) — shifts every other row by +0.5 X for a brick stagger.
+- **Rotate 90°** (`Rotate90`)
+- **Print Grid** (`PrintGrid`) — histograms blocks by snapped `Angle` (`Debug.Log`).
+- **Save as Mesh** (`SaveAsMesh`) — editor-only; see Export.
 
 ## Carving with a cutting surface
 
-The `Cutting` editing mode sculpts blocks against real geometry:
-1. Put a mesh (the desired relief shape) on a GameObject, give it a collider, and place it on the **cutting layer** (the layer selected in each block's `_cuttingLayerMask` and the grid's `CuttingSurface`).
-2. Set the blocks' `EditingMode = Cutting` and choose a `HeightMode` (`Middle` = flat per block, `Corner` = fully sculpted, `Horizontal`/`Vertical` = edge-wise).
-3. Run **Cut with Surface**. Each block raycasts along local −Z; the hit distance becomes that corner/edge/center depth, capped at `DEFAULT_DEPTH * Depth`; a miss falls back to `DEFAULT_DEPTH`.
+To sculpt blocks against real geometry:
+1. Put a mesh (the desired relief shape) on a GameObject with a collider, on the **cutting layer**.
+2. On `DiffuserGrid`, set `DepthSource = Cutting`, choose the `HeightMode` (`Middle`=flat per block, `Corner`=fully sculpted, `Horizontal`/`Vertical`=edge-wise), and set `_cuttingLayerMask` to that layer.
+3. Run **Reshape Blocks** (or Play/Generate). Each block raycasts along local −Z; hit distance becomes that corner/edge/center depth (capped at `DefaultDepth * Depth`), a miss falls back to `DefaultDepth`.
 
-`CuttingSurface.cs` is an empty marker component — the actual surface is just its collider mesh. See `diffuser-architecture` for mode/gating detail.
+`CuttingSurface.cs` is an empty marker — the actual surface is its collider mesh. The cutting layer mask now lives on the **grid** (`_cuttingLayerMask`), not on each block.
 
 ## Configuring curves
 
-For the `Curve` editing mode (no external geometry needed):
-1. Set blocks' `EditingMode = Curve`.
-2. On `DiffuserGrid`, enable any of `UseHorizontalCurve` / `UseVerticalCurve` / `UseDioganalCurve` (sic) and author the matching `AnimationCurve` (`HorizontalCurve`/`VerticalCurve`/`DioganalCurve`). Curves are evaluated at the block's normalized `[0,1]` grid position.
-3. Choose `SelectedCurveMode`:
-   - `Height` — curve value scales each block's flat depth.
-   - `Angle` — curve value becomes a face tilt angle, snapped to `SnapAngle` degrees (see `diffuser-mesh-geometry` for the tilt math).
-4. Regenerate. `Initialize()` applies the curve during generation; there is no live "update curves" button wired in (`UpdateCurveCubes` exists but is commented out in `Update`).
+For `DepthSource = Curve` (no external geometry):
+1. Set `DepthSource = Curve`.
+2. Enable any of `UseHorizontalCurve` / `UseVerticalCurve` / `UseDiagonalCurve` and author the matching `AnimationCurve`. Curves are evaluated at the block's normalized `[0,1]` grid position.
+3. Choose `SelectedCurveMode`: `Height` (curve scales flat depth) or `Angle` (curve becomes a face tilt, snapped to `SnapAngle` degrees — see `diffuser-mesh-geometry`).
+4. Reshape.
 
-## Selecting and moving blocks at runtime
+## Runtime control panel (UI Toolkit)
 
-In Play mode, `SelectionManager` (on a scene object) lets you hover (material swap + vertex indicators) and click-select a `SelectableBlock`, which activates a `RuntimeTransformHandle` position gizmo on it. Set `_currentMode` off `Idle` to enable. The gizmo consumes input first, so dragging it won't deselect. `CameraLookAt` keeps the camera aimed at its target for orbiting.
+`DiffuserControlPanel` ([DiffuserControlPanel.cs](../../../Assets/Scripts/UI/DiffuserControlPanel.cs)) is a floating panel that exposes every setting as sliders/toggles/enum-dropdowns plus Regenerate/Reshape/Print buttons, so you can tune the wall in Play mode without the inspector. Structural controls call `Generate()`; shaping controls call `Reshape()`. Curve *shapes* are still authored on the grid component (no runtime curve editor).
+
+**One-click setup:** menu **Tools → DiffuserCreator → Create Control Panel** ([DiffuserControlPanelSetup.cs](../../../Assets/Scripts/Editor/DiffuserControlPanelSetup.cs)) creates a GameObject with a `UIDocument` + `DiffuserControlPanel`, wires it to the scene's `DiffuserGrid`, and creates a `PanelSettings` asset if the project has none.
+
+**Manual setup:** add a GameObject → `UIDocument` (assign a `PanelSettings`; create one via *Assets ▸ Create ▸ UI Toolkit ▸ Panel Settings Asset*, which also generates a default runtime theme) → add `DiffuserControlPanel` and assign the `DiffuserGrid`. Requires a `PanelSettings` with a theme to render — that's standard UI Toolkit runtime setup.
 
 ## Exporting the result
 
-Three paths, all **editor-only** (they use `UnityEditor` APIs — see `diffuser-build-and-run` for the build implication):
+Three paths, all **editor-only** (see `diffuser-build-and-run`):
+1. **Combined mesh `.asset`** — `DiffuserGrid` → **Save as Mesh**. Combines all child `MeshFilter`s into one mesh via a Save-File panel into `Assets/GeneratedMesh`. Existing outputs: `Assets/Meshes/*.asset`.
+2. **Wavefront OBJ** — menu **File → Export → Wavefront OBJ** (with/without submeshes), from `ObjExporter`/`ObjExporterScript` ([ObjExporterScript.cs](../../../Assets/Scripts/ObjExporterScript.cs)). Exports the current `Selection`, zeroing its position and flipping Z for OBJ handedness.
+3. **FBX** — via `com.unity.formats.fbx`; use Unity's **GameObject → Export To FBX…** on the generated grid.
 
-1. **Combined mesh `.asset`** — `DiffuserGrid` → **Save as Mesh**. Combines all child `MeshFilter`s (`Mesh.CombineMeshes`) into one mesh and writes it via a Save-File panel into `Assets/GeneratedMesh` (`SaveMesh(...)`, makes a new instance, optional `MeshUtility.Optimize`). Existing outputs: `Assets/Meshes/*.asset`.
-2. **Wavefront OBJ** — menu **File → Export → Wavefront OBJ** (with/without submeshes), from `ObjExporter`/`ObjExporterScript` ([ObjExporterScript.cs](../../../Assets/Scripts/ObjExporterScript.cs)). Exports the current `Selection` (first selected GameObject and its children), temporarily zeroing its position, flipping Z to match OBJ's coordinate handedness. Prior output: `Assets/GeneratedMesh/*.obj`.
-3. **FBX** — via the `com.unity.formats.fbx` package (v5.1.4). Use Unity's built-in **GameObject → Export To FBX…** on the generated grid. Prior output: `Assets/GeneratedMesh/geil.fbx`.
+OBJ/FBX feed CAD/CAM or a 3D printer / CNC that cuts the real diffuser panel.
 
-For a physical build, OBJ/FBX feed CAD/CAM or a 3D printer / CNC that cuts the real diffuser panel.
+## Runtime selection
+
+In Play mode, `SelectionManager` (set `_currentMode` off `Idle`) lets you hover (material + vertex indicators) and click-select a block, activating a `RuntimeTransformHandle` gizmo. `CameraLookAt` keeps the camera aimed for orbiting.
 
 ## When NOT to use this skill
 
-- Why a mode does what it does, curve averaging rules → `diffuser-architecture`.
+- Why a mode does what it does, curve averaging, the shaper contract → `diffuser-architecture`.
 - Mesh internals, winding, angle math → `diffuser-mesh-geometry`.
-- Editor-only-code breaks player builds, package versions, opening the project → `diffuser-build-and-run`.
+- Editor-only-code build implications, package versions, serialization → `diffuser-build-and-run`.
 
 ## Provenance and maintenance
 
 Verified 2026-07-06 against `master` HEAD `93b81d8`. Re-verify:
 
 ```powershell
-# ContextMenu actions
-Select-String -Path "Assets\Scripts\DiffuserGrid.cs" -Pattern "ContextMenu|SaveAsMesh|SaveMesh"
-# OBJ export menu items
+Select-String -Path "Assets\Scripts\DiffuserGrid.cs" -Pattern "ContextMenu|Generate|Reshape|SaveAsMesh"
+Select-String -Path "Assets\Scripts\Editor\DiffuserControlPanelSetup.cs" -Pattern "MenuItem|PanelSettings|UIDocument"
 Select-String -Path "Assets\Scripts\ObjExporterScript.cs" -Pattern "MenuItem|DoExport"
-# FBX package present
 Select-String -Path "Packages\manifest.json" -Pattern "formats.fbx"
 ```
 

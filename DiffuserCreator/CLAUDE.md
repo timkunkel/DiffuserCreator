@@ -12,7 +12,8 @@ Adopted from the WeAre team's convention (shared across their Unity projects):
 - **Meaningful names over abbreviations.** No explanatory comments as a substitute for clear naming. (Fix misspellings like "Dioganal" → "Diagonal" — but see the serialization rule below.)
 - Match the existing `.editorconfig`/ReSharper formatting: 4-space indent, `_camelCase` private fields, `PascalCase` public members, `ALL_UPPER` constants, aligned consecutive assignments/declarations (the codebase already does this).
 - Use `#region` blocks to group logical sections in larger files (`#region MonoBehaviour methods`, `#region Mesh construction`, …).
-- One first-party namespace: put gameplay scripts in a `DiffuserCreator` namespace. Do **not** rename the `MonoBehaviour` classes or their `.cs` files (breaks prefab/scene component references).
+- One first-party namespace tree: gameplay scripts in `DiffuserCreator`, UI in `DiffuserCreator.UI`, editor tools in `DiffuserCreator.EditorTools`. Do **not** rename the `MonoBehaviour` classes or their `.cs` files (breaks prefab/scene component references).
+- Keep the layering: `DiffuserBlock` is dumb geometry, depth decisions live in `DepthShaper` strategies fed a `DiffuserSettings` snapshot, `DiffuserGrid` orchestrates. A new way to drive depth = a new `DepthShaper` subclass + a factory case, never new logic in the block. (See the `diffuser-architecture` skill.)
 
 ## Hard Rules (this project)
 
@@ -25,9 +26,9 @@ Adopted from the WeAre team's convention (shared across their Unity projects):
 ## Verifying changes (no CI, no tests)
 
 There is no automated test suite. To verify:
-1. Open in Unity 2022.1.15f1, let it recompile, check the Console for errors (fastest signal).
+1. Open in Unity 6000.3.9f1, let it recompile, check the Console for errors (fastest signal). Or compile-check offline with the installed editor's Roslyn (recipe in the `diffuser-build-and-run` skill) — this caught real errors during the refactor.
 2. Open `Assets/Scenes/MainScene.unity`, press Play — `DiffuserGrid` regenerates the wall.
-3. Exercise the `DiffuserGrid` `[ContextMenu]` actions (Generate / Cut with Surface / Rotate 90° / Print Grid / Save as Mesh).
+3. Exercise the `DiffuserGrid` `[ContextMenu]` actions (Generate Grid / Reshape Blocks / Rotate 90° / Offset X / Print Grid / Save as Mesh), and the runtime control panel (Tools ▸ DiffuserCreator ▸ Create Control Panel).
 4. After any serialized-field change, confirm the prefab/scene still shows configured values (not reset to defaults) — this catches a missing `[FormerlySerializedAs]`.
 
 ## Conventions

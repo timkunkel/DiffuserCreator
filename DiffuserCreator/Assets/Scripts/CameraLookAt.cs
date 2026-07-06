@@ -1,18 +1,18 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class CameraLookAt : MonoBehaviour
+namespace DiffuserCreator
 {
-    [SerializeField]
-    private Camera _camera;
-
-    [SerializeField]
-    private Transform _lookAtTarget;
-
-    private void Update()
+    public class CameraLookAt : MonoBehaviour
     {
-        _camera.transform.LookAt(_lookAtTarget);
+        [SerializeField]
+        private Camera _camera;
+
+        [SerializeField]
+        private Transform _lookAtTarget;
+
+        private void Update()
+        {
+            _camera.transform.LookAt(_lookAtTarget);
+        }
     }
 }
