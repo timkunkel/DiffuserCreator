@@ -1,61 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
 namespace DiffuserCreator
 {
-    // Lays out a grid of DiffuserBlocks and delegates their depth to a DepthShaper. It owns the
-    // configuration (grid size, spacing, block size, depth source, curves) and exposes it as
-    // properties so the runtime control panel can drive a rebuild.
+    // Lays out a grid of DiffuserBlocks and delegates their depth to a DepthShaper. All configuration
+    // lives in a single serialized DiffuserSettings object, exposed to the runtime control panel via
+    // the Settings property; the block prefab is the only other serialized reference.
     public class DiffuserGrid : MonoBehaviour
     {
         #region Serialized fields
 
-        [Header("Grid")]
         [SerializeField]
-        private int _rows, _columns;
-
-        [SerializeField]
-        private float _horizontalSpacing, _verticalSpacing;
-
-        [Header("Block")]
-        [SerializeField]
-        private float _blockWidth, _blockHeight, _blockDepth;
+        private DiffuserSettings _settings = new DiffuserSettings();
 
         [SerializeField]
         private DiffuserBlock _blockPrefab;
-
-        [Header("Depth")]
-        [SerializeField]
-        private DepthSource _depthSource = DepthSource.Curve;
-
-        [SerializeField]
-        private HeightMode _heightMode = HeightMode.Middle;
-
-        [SerializeField]
-        private LayerMask _cuttingLayerMask;
-
-        [SerializeField]
-        private float _defaultDepth = 1f;
-
-        [Header("Curve")]
-        public CurveMode SelectedCurveMode;
-
-        public bool           UseHorizontalCurve;
-        public AnimationCurve HorizontalCurve;
-        public bool           UseVerticalCurve;
-        public AnimationCurve VerticalCurve;
-
-        [FormerlySerializedAs("UseDioganalCurve")]
-        public bool UseDiagonalCurve;
-
-        [FormerlySerializedAs("DioganalCurve")]
-        public AnimationCurve DiagonalCurve;
-
-        public int SnapAngle = 5;
 
         #endregion
 
@@ -63,25 +25,10 @@ namespace DiffuserCreator
 
         private DiffuserBlock[,] _blocks;
 
-        public float Width  => _columns * _blockWidth + (_columns - 1) * _horizontalSpacing;
-        public float Height => _rows * _blockHeight + (_rows - 1) * _verticalSpacing;
+        public DiffuserSettings Settings => _settings;
 
-        #endregion
-
-        #region Settings properties
-
-        public int   Rows              { get => _rows;              set => _rows = Mathf.Max(1, value); }
-        public int   Columns           { get => _columns;           set => _columns = Mathf.Max(1, value); }
-        public float HorizontalSpacing { get => _horizontalSpacing; set => _horizontalSpacing = value; }
-        public float VerticalSpacing   { get => _verticalSpacing;   set => _verticalSpacing = value; }
-        public float BlockWidth        { get => _blockWidth;        set => _blockWidth = value; }
-        public float BlockHeight       { get => _blockHeight;       set => _blockHeight = value; }
-        public float BlockDepth        { get => _blockDepth;        set => _blockDepth = value; }
-        public float DefaultDepth      { get => _defaultDepth;      set => _defaultDepth = value; }
-
-        public DepthSource DepthSource { get => _depthSource; set => _depthSource = value; }
-        public HeightMode  HeightMode  { get => _heightMode;  set => _heightMode = value; }
-        public CurveMode   CurveMode   { get => SelectedCurveMode; set => SelectedCurveMode = value; }
+        public float Width  => _settings.Columns * _settings.BlockWidth + (_settings.Columns - 1) * _settings.HorizontalSpacing;
+        public float Height => _settings.Rows * _settings.BlockHeight + (_settings.Rows - 1) * _settings.VerticalSpacing;
 
         #endregion
 
@@ -101,31 +48,33 @@ namespace DiffuserCreator
         {
             DestroyBlocks();
 
-            _blocks = new DiffuserBlock[_rows, _columns];
+            int rows    = Mathf.Max(1, _settings.Rows);
+            int columns = Mathf.Max(1, _settings.Columns);
 
-            float totalWidth  = Width;
-            float totalHeight = Height;
+            _blocks = new DiffuserBlock[rows, columns];
 
-            float rowStartPosition    = -totalHeight / 2f;
-            float columnStartPosition = -totalWidth / 2f;
+            float rowStartPosition    = -Height / 2f;
+            float columnStartPosition = -Width / 2f;
 
             float currentVerticalSpacing = 0f;
 
-            for (int row = 0; row < _rows; row++)
+            for (int row = 0; row < rows; row++)
             {
-                float y = row * _blockHeight + _blockHeight / 2f + currentVerticalSpacing + rowStartPosition;
+                float y = row * _settings.BlockHeight + _settings.BlockHeight / 2f
+                          + currentVerticalSpacing + rowStartPosition;
 
                 float currentHorizontalSpacing = 0f;
-                for (int column = 0; column < _columns; column++)
+                for (int column = 0; column < columns; column++)
                 {
-                    float x = column * _blockWidth + _blockWidth / 2f + currentHorizontalSpacing + columnStartPosition;
+                    float x = column * _settings.BlockWidth + _settings.BlockWidth / 2f
+                              + currentHorizontalSpacing + columnStartPosition;
 
                     _blocks[row, column] = CreateBlock(new Vector2(x, y));
 
-                    currentHorizontalSpacing += _horizontalSpacing;
+                    currentHorizontalSpacing += _settings.HorizontalSpacing;
                 }
 
-                currentVerticalSpacing += _verticalSpacing;
+                currentVerticalSpacing += _settings.VerticalSpacing;
             }
 
             Reshape();
@@ -134,7 +83,7 @@ namespace DiffuserCreator
         private DiffuserBlock CreateBlock(Vector2 blockPosition)
         {
             DiffuserBlock block = Instantiate(_blockPrefab, blockPosition, Quaternion.identity, transform);
-            block.SetSize(_blockWidth, _blockHeight, _blockDepth);
+            block.SetSize(_settings.BlockWidth, _settings.BlockHeight, _settings.BlockDepth);
             block.NormalizedPosition = Normalize(blockPosition);
             return block;
         }
@@ -172,34 +121,15 @@ namespace DiffuserCreator
         {
             if (_blocks == null) { return; }
 
-            DiffuserSettings settings = BuildSettings();
-            DepthShaper       shaper   = DepthShaper.For(_depthSource);
+            DepthShaper shaper = DepthShaper.For(_settings.DepthSource);
 
             foreach (DiffuserBlock block in _blocks)
             {
                 if (block != null)
                 {
-                    shaper.Shape(block, settings);
+                    shaper.Shape(block, _settings);
                 }
             }
-        }
-
-        private DiffuserSettings BuildSettings()
-        {
-            return new DiffuserSettings
-            {
-                HeightMode         = _heightMode,
-                CurveMode          = SelectedCurveMode,
-                UseHorizontalCurve = UseHorizontalCurve,
-                HorizontalCurve    = HorizontalCurve,
-                UseVerticalCurve   = UseVerticalCurve,
-                VerticalCurve      = VerticalCurve,
-                UseDiagonalCurve   = UseDiagonalCurve,
-                DiagonalCurve      = DiagonalCurve,
-                SnapAngle          = SnapAngle,
-                CuttingLayerMask   = _cuttingLayerMask,
-                DefaultDepth       = _defaultDepth
-            };
         }
 
         #endregion

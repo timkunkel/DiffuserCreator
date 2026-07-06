@@ -13,21 +13,24 @@ How to work on this project without breaking it. No CI, no test project — veri
 - Key packages (`Packages/manifest.json`): `com.unity.probuilder`, `com.unity.formats.fbx`, `com.unity.timeline`, `com.unity.ugui` + `com.unity.ui.builder` (UI Toolkit), TextMesh Pro.
 - **ProBuilder is a code dependency**: `CurveDepthShaper.ShapeWithAngle` calls `UnityEngine.ProBuilder.Snapping.Snap`. Removing ProBuilder breaks compilation.
 - **TextMesh Pro** is a code dependency via `VertexIndicator` (`TMPro.TextMeshPro`).
-- **UI Toolkit** (`UnityEngine.UIElements`) is a code dependency via `DiffuserControlPanel`; the runtime panel also needs a `PanelSettings` asset in the scene's `UIDocument` (see `diffuser-editor-workflows`).
+- **UI Toolkit** (`UnityEngine.UIElements`) is a code dependency via `DiffuserControlPanel`; the runtime panel needs a `PanelSettings` (with a real theme) + the UXML in the scene's `UIDocument`, plus an `EventSystem` for input (all handled by the setup menu — see `diffuser-editor-workflows`).
+- **uGUI** (`UnityEngine.UI`) is referenced only for the `EventSystem`/`StandaloneInputModule` the setup menu adds (legacy Input Manager; no Input System package installed).
 
 ## Source layout (all in `DiffuserCreator` namespace)
 
 | File | Role |
 |---|---|
-| `DiffuserSettings.cs` | Enums (`HeightMode`/`DepthSource`/`CurveMode`) + shaping-snapshot class |
+| `DiffuserSettings.cs` | Enums (`HeightMode`/`DepthSource`/`CurveMode`) + the full config class (single source of truth) |
 | `GeometryUtils.cs` | `LineLineIntersection` |
 | `DepthShaper.cs` | Strategy base + `Cutting`/`Curve`/`Manual` shapers |
 | `DiffuserBlock.cs` | Dumb cube geometry + mesh + indicators |
-| `DiffuserGrid.cs` | Orchestrator + config + `[ContextMenu]`s + editor mesh export |
-| `UI/DiffuserControlPanel.cs` | Runtime UI Toolkit panel (`DiffuserCreator.UI`) |
-| `Editor/DiffuserControlPanelSetup.cs` | Editor menu to wire the panel (`DiffuserCreator.EditorTools`) |
+| `DiffuserGrid.cs` | Orchestrator; owns one `[SerializeField] private DiffuserSettings _settings` (+`Settings` accessor + migration); `[ContextMenu]`s; editor mesh export |
+| `UI/DiffuserControlPanel.cs` | Runtime panel; binds `Assets/UI/DiffuserControlPanel.uxml` controls to `grid.Settings` (`DiffuserCreator.UI`) |
+| `Editor/DiffuserControlPanelSetup.cs` | Idempotent setup menu: theme + UXML + EventSystem + grid (`DiffuserCreator.EditorTools`) |
 | `SelectionManager` / `SelectableBlock` / `VertexIndicator` / `CameraLookAt` / `CuttingSurface` | Runtime selection + markers |
 | `ObjExporterScript.cs` | OBJ export (editor-only) |
+
+UI assets live in `Assets/UI/`: `DiffuserControlPanel.uxml` (layout), `DiffuserControlPanel.uss` (style), `DiffuserRuntimeTheme.tss` (the runtime theme, imports Unity defaults), `DiffuserPanelSettings.asset`.
 
 `Assets/Scripts/` has **no asmdef**; everything compiles into `Assembly-CSharp` (runtime), except files under `Assets/Scripts/Editor/` (the special `Editor` folder name makes them editor-only) and code behind `#if UNITY_EDITOR`.
 
@@ -42,17 +45,17 @@ Keep it that way: any new `UnityEditor` use goes behind `#if UNITY_EDITOR` or in
 
 ## Trap 2 — renaming serialized fields loses data
 
-`DiffuserGrid` config is stored in `DiffuserGrid.prefab` and, importantly, as **prefab-instance overrides in `MainScene.unity`** (the prefab itself has zeros; the real rows/columns/sizes and authored curves are scene overrides). Unity serializes by **field name / property path**. Renaming a serialized field — or **moving it into a nested object** (e.g. a `DiffuserSettings _settings`) — changes the path and silently drops the stored value. That's why the grid keeps its settings as flat fields and only assembles a `DiffuserSettings` snapshot at runtime.
+`DiffuserGrid` config is stored in `DiffuserGrid.prefab` and, importantly, as **prefab-instance overrides in `MainScene.unity`** (the prefab itself has zeros; the real rows/columns/sizes and authored curves are scene overrides). Unity serializes by **field name / property path**. Renaming a serialized field — or **moving it into a nested object** — changes the path and silently drops the stored value.
 
-For any rename, preserve the data:
-```csharp
-using UnityEngine.Serialization;
-[FormerlySerializedAs("DioganalCurve")]
-public AnimationCurve DiagonalCurve;
-```
-The grid already does this for the "Dioganal" misspelling (`UseDioganalCurve`→`UseDiagonalCurve`, `DioganalCurve`→`DiagonalCurve`). Private non-serialized fields rename freely. `DiffuserBlock` no longer has serialized config beyond `_vertexIndicatorPrefab` — its old `Mode`/`EditingMode`/`_cuttingLayerMask` moved to the grid, so those prefab values are dropped by design (re-set `_cuttingLayerMask` on the grid once).
+The grid's config was moved into a nested `DiffuserSettings _settings`, so the old flat fields are **retained as `[SerializeField, HideInInspector]` legacy** and copied into `_settings` once via `ISerializationCallbackReceiver.OnAfterDeserialize` (guarded by `_migratedToSettings`; a `hasLegacyData` check stops a freshly added component from overwriting defaults with zeros). This preserves the scene overrides + authored curves without any `FormerlySerializedAs`. After every DiffuserGrid asset has been opened and re-saved, the legacy fields are dead and removable.
+
+For a simple rename (not a move), `[FormerlySerializedAs("oldName")]` is still the tool. Private non-serialized fields rename freely. `DiffuserBlock` has no serialized config beyond `_vertexIndicatorPrefab`.
 
 Adding a namespace to a `MonoBehaviour` is safe (Unity keys components by the script file GUID in the `.cs.meta`, not the type name) — but never rename the class or `.cs` file.
+
+## Trap 3 — a PanelSettings without a real theme = invisible UI
+
+A runtime UI Toolkit `PanelSettings` renders nothing usable unless its `themeStyleSheet` imports Unity's defaults. The theme `.tss` **must** contain `@import url("unity-theme://default");` — a file with only `VisualElement {}` leaves every control unstyled/invisible (a real bug hit here). `Assets/UI/DiffuserRuntimeTheme.tss` is the correct one and the setup menu always assigns it. Symptom of a bad theme: the panel GameObject exists and is enabled but nothing (or unstyled junk) shows in Play mode.
 
 ## Offline compile check (no editor launch)
 

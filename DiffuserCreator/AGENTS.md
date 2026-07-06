@@ -24,12 +24,12 @@ DepthShaper (behavior)          Assets/Scripts/DepthShaper.cs
 DiffuserBlock (geometry)        Assets/Scripts/DiffuserBlock.cs
   └─ a dumb cube: size + 4 corner depths + mesh + collider + indicators
 DiffuserSettings (data)         Assets/Scripts/DiffuserSettings.cs
-  └─ enums + per-rebuild snapshot of the shaping parameters
-DiffuserControlPanel (UI)       Assets/Scripts/UI/DiffuserControlPanel.cs
-  └─ runtime UI Toolkit panel binding every setting to Generate/Reshape
+  └─ enums + the full config (grid, block, depth, curves) — the single source of truth
+DiffuserControlPanel (UI)       Assets/Scripts/UI/DiffuserControlPanel.cs (+ Assets/UI/*.uxml/.uss)
+  └─ runtime UI Toolkit panel binding every setting (grid.Settings) to Generate/Reshape
 ```
 
-Core loop: `DiffuserGrid.Generate()` (on `Start` or via `[ContextMenu]`/UI) instantiates the block prefab per cell, sizes it via `transform.localScale`, sets its normalized grid position, then `Reshape()` builds a `DiffuserSettings` and delegates depth to the active `DepthShaper`. Structural changes call `Generate()`; depth/curve changes call the cheaper `Reshape()`.
+Core loop: `DiffuserGrid.Generate()` (on `Start` or via `[ContextMenu]`/UI) instantiates the block prefab per cell, sizes it via `transform.localScale`, sets its normalized grid position, then `Reshape()` hands the grid's single `DiffuserSettings` to the active `DepthShaper`. Structural changes call `Generate()`; depth/curve changes call the cheaper `Reshape()`. All config lives in one `[SerializeField] private DiffuserSettings _settings`, exposed as `grid.Settings`.
 
 The previous god-object `DiffuserBlock` (which held cutting, curve, and grid logic) is now pure geometry — **all depth decisions live in `DepthShaper`**. Adding a new way to drive depth = subclass `DepthShaper` + one factory case; the block is untouched.
 
@@ -46,7 +46,7 @@ Assets/Prefabs/              # DiffuserGrid, DiffuserBlock, CuttingSurface, Vert
 Assets/Materials/            # Hover / Selected / Vertex / CuttingPlane materials
 Assets/GeneratedMesh/, Assets/Meshes/   # Export outputs (OBJ / FBX / .asset)
 Assets/Plugins/RuntimeTransformHandle/  # Third-party gizmo plugin (namespace RuntimeHandle) — DO NOT refactor
-Assets/UI/                   # PanelSettings lives here after control-panel setup
+Assets/UI/                   # DiffuserControlPanel.uxml/.uss, DiffuserRuntimeTheme.tss, DiffuserPanelSettings.asset
 PDFsharp/                    # Vendored PDF library at repo root — NOT compiled by Unity, NOT wired in
 Packages/manifest.json       # ProBuilder, FBX exporter, TextMeshPro, UI Builder, Timeline, …
 ```
@@ -55,13 +55,13 @@ Packages/manifest.json       # ProBuilder, FBX exporter, TextMeshPro, UI Builder
 
 | Component | Role |
 |---|---|
-| `DiffuserGrid` | Owns config; generates blocks + lays them out; builds `DiffuserSettings`; applies a `DepthShaper`; hosts `[ContextMenu]`s and mesh export; exposes get/set properties for the UI. |
+| `DiffuserGrid` | Owns one serialized `DiffuserSettings` (`grid.Settings`); generates + lays out blocks; applies a `DepthShaper`; migrates legacy fields; `[ContextMenu]`s + mesh export. |
 | `DepthShaper` (+ `Cutting`/`Curve`/`Manual`) | Strategy that computes a block's four corner depths from a `DiffuserSettings`. |
 | `DiffuserBlock` | Dumb cube: 8 points, 4 corner depths, mesh + collider, vertex indicators. `SetSize`/`SetUniformDepth`/`SetDepths`/`NormalizedPosition`/`Angle`. |
-| `DiffuserSettings` | `[Serializable]` shaping snapshot + the `HeightMode`/`DepthSource`/`CurveMode` enums. |
+| `DiffuserSettings` | `[Serializable]` full config (grid/block/depth/curve) + the `HeightMode`/`DepthSource`/`CurveMode` enums; the single source of truth. |
 | `GeometryUtils` | Static `LineLineIntersection` (used by Angle-mode tilt). |
-| `DiffuserControlPanel` | Runtime UI Toolkit panel (needs a `UIDocument` + `PanelSettings`). |
-| `DiffuserControlPanelSetup` | Editor menu **Tools ▸ DiffuserCreator ▸ Create Control Panel** to wire the panel. |
+| `DiffuserControlPanel` | Runtime panel; binds `Assets/UI/DiffuserControlPanel.uxml` controls to `grid.Settings` (needs a `UIDocument` + themed `PanelSettings` + `EventSystem`). |
+| `DiffuserControlPanelSetup` | Idempotent editor menu **Tools ▸ DiffuserCreator ▸ Create Control Panel**: assigns theme + UXML + EventSystem + grid. |
 | `CuttingSurface` | Empty marker; its collider is the shape blocks carve against in `Cutting` mode. |
 | `SelectionManager` / `SelectableBlock` | Runtime hover/select + `RuntimeTransformHandle` gizmo. |
 | `VertexIndicator` / `CameraLookAt` | Corner label / camera aim. |
@@ -70,7 +70,7 @@ Packages/manifest.json       # ProBuilder, FBX exporter, TextMeshPro, UI Builder
 ## Two traps that bite hardest
 
 1. **Editor-only APIs in runtime scripts.** `Assets/Scripts/` compiles into `Assembly-CSharp`; `UnityEditor` is stripped from player builds. The editor-only code (`ObjExporterScript`, `DiffuserGrid.SaveAsMesh`, `Editor/DiffuserControlPanelSetup`) is isolated behind `#if UNITY_EDITOR` and/or the `Editor/` folder — keep it that way.
-2. **Serialized-field renames lose data.** Grid config lives in the prefab and as **scene overrides** in `MainScene.unity`, keyed by field name. Renaming — or moving into a nested object — silently resets values. Use `[FormerlySerializedAs("oldName")]`; that's why the grid's settings stay flat and `DiffuserSettings` is only a runtime snapshot. Never rename the `MonoBehaviour` class or `.cs` file.
+2. **Serialized-field renames lose data.** Grid config lives in the prefab and as **scene overrides** in `MainScene.unity`, keyed by field name. Renaming — or moving into a nested object — silently resets values. The move into `DiffuserSettings _settings` is handled by retained `[HideInInspector]` legacy fields + a one-shot `ISerializationCallbackReceiver` migration. Never rename the `MonoBehaviour` class or `.cs` file. See `diffuser-build-and-run` (also Trap 3: a themeless `PanelSettings` renders an invisible UI).
 
 Both are detailed in `diffuser-build-and-run`.
 

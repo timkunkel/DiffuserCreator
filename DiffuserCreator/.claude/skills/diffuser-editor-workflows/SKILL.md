@@ -42,11 +42,11 @@ For `DepthSource = Curve` (no external geometry):
 
 ## Runtime control panel (UI Toolkit)
 
-`DiffuserControlPanel` ([DiffuserControlPanel.cs](../../../Assets/Scripts/UI/DiffuserControlPanel.cs)) is a floating panel that exposes every setting as sliders/toggles/enum-dropdowns plus Regenerate/Reshape/Print buttons, so you can tune the wall in Play mode without the inspector. Structural controls call `Generate()`; shaping controls call `Reshape()`. Curve *shapes* are still authored on the grid component (no runtime curve editor).
+`DiffuserControlPanel` ([DiffuserControlPanel.cs](../../../Assets/Scripts/UI/DiffuserControlPanel.cs)) is a floating panel that exposes every setting as sliders/toggles/dropdowns plus Regenerate/Reshape/Print buttons, so you can tune the wall in Play mode without the inspector. The layout is authored in `Assets/UI/DiffuserControlPanel.uxml` (+ `.uss`); the code queries controls by name in `Start()` and binds them to `grid.Settings`. Structural controls call `Generate()`; shaping controls call `Reshape()`. Curve *shapes* are still authored on the grid component (no runtime curve editor).
 
-**One-click setup:** menu **Tools → DiffuserCreator → Create Control Panel** ([DiffuserControlPanelSetup.cs](../../../Assets/Scripts/Editor/DiffuserControlPanelSetup.cs)) creates a GameObject with a `UIDocument` + `DiffuserControlPanel`, wires it to the scene's `DiffuserGrid`, and creates a `PanelSettings` asset if the project has none.
+**One-click setup/repair:** menu **Tools → DiffuserCreator → Create Control Panel** ([DiffuserControlPanelSetup.cs](../../../Assets/Scripts/Editor/DiffuserControlPanelSetup.cs)) is idempotent — it finds/creates the panel GameObject, assigns the `PanelSettings` a **working runtime theme** (`Assets/UI/DiffuserRuntimeTheme.tss`, overriding any incomplete hand-made theme), sets the `UIDocument.visualTreeAsset` to the UXML, ensures an `EventSystem` (for input), and wires the `DiffuserGrid`. Re-run it any time the panel misbehaves.
 
-**Manual setup:** add a GameObject → `UIDocument` (assign a `PanelSettings`; create one via *Assets ▸ Create ▸ UI Toolkit ▸ Panel Settings Asset*, which also generates a default runtime theme) → add `DiffuserControlPanel` and assign the `DiffuserGrid`. Requires a `PanelSettings` with a theme to render — that's standard UI Toolkit runtime setup.
+> **Theme gotcha (the #1 cause of an invisible panel):** a `PanelSettings` renders nothing usable unless its `themeStyleSheet` points to a theme that imports Unity's defaults — the `.tss` **must** contain `@import url("unity-theme://default");`. A theme file with only `VisualElement {}` (easy to hand-create by mistake) leaves every control unstyled/invisible. The setup menu always assigns the correct one.
 
 ## Exporting the result
 

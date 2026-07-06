@@ -13,7 +13,7 @@ Adopted from the WeAre team's convention (shared across their Unity projects):
 - Match the existing `.editorconfig`/ReSharper formatting: 4-space indent, `_camelCase` private fields, `PascalCase` public members, `ALL_UPPER` constants, aligned consecutive assignments/declarations (the codebase already does this).
 - Use `#region` blocks to group logical sections in larger files (`#region MonoBehaviour methods`, `#region Mesh construction`, …).
 - One first-party namespace tree: gameplay scripts in `DiffuserCreator`, UI in `DiffuserCreator.UI`, editor tools in `DiffuserCreator.EditorTools`. Do **not** rename the `MonoBehaviour` classes or their `.cs` files (breaks prefab/scene component references).
-- Keep the layering: `DiffuserBlock` is dumb geometry, depth decisions live in `DepthShaper` strategies fed a `DiffuserSettings` snapshot, `DiffuserGrid` orchestrates. A new way to drive depth = a new `DepthShaper` subclass + a factory case, never new logic in the block. (See the `diffuser-architecture` skill.)
+- Keep the layering: `DiffuserBlock` is dumb geometry, depth decisions live in `DepthShaper` strategies fed the grid's single serialized `DiffuserSettings`, `DiffuserGrid` orchestrates. All config is `DiffuserSettings` (exposed as `grid.Settings`), not a public field/property pile; the UI is the only external consumer. A new way to drive depth = a new `DepthShaper` subclass + a factory case, never new logic in the block. (See the `diffuser-architecture` skill.)
 
 ## Hard Rules (this project)
 

@@ -111,24 +111,26 @@ namespace DiffuserCreator
         {
             Vector2 pos   = block.NormalizedPosition;
             float   value = 0f;
+            int     count = 0;
 
             if (settings.UseHorizontalCurve)
             {
                 value += settings.HorizontalCurve.Evaluate(pos.x);
+                count++;
             }
 
             if (settings.UseVerticalCurve)
             {
                 value += settings.VerticalCurve.Evaluate(pos.y);
+                count++;
             }
 
-            if (settings.UseHorizontalCurve && settings.UseVerticalCurve)
-            {
-                value /= 2f;
-            }
+            // The curve value is a fraction of the block's own depth (0..1), so a block never gets
+            // deeper than its configured depth. With no curve enabled the block keeps full depth.
+            float fraction = count > 0 ? Mathf.Clamp01(value / count) : 1f;
 
             block.Angle = 0;
-            block.SetUniformDepth(block.InitialDepth + value * block.InitialDepth);
+            block.SetUniformDepth(block.InitialDepth * fraction);
         }
 
         private static void ShapeWithAngle(DiffuserBlock block, DiffuserSettings settings)

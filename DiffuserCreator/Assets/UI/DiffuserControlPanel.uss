@@ -1,0 +1,66 @@
+.panel {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 320px;
+    max-height: 92%;
+    padding: 12px;
+    background-color: rgba(20, 22, 28, 0.92);
+    border-radius: 8px;
+    color: rgb(222, 226, 232);
+}
+
+.title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+    color: rgb(240, 242, 246);
+}
+
+.content {
+    flex-grow: 1;
+}
+
+.section {
+    font-size: 11px;
+    -unity-font-style: bold;
+    margin-top: 10px;
+    margin-bottom: 2px;
+    color: rgb(150, 190, 255);
+}
+
+.hint {
+    font-size: 10px;
+    margin-top: 2px;
+    white-space: normal;
+    color: rgb(160, 165, 172);
+}
+
+.unity-base-field {
+    margin-top: 2px;
+}
+
+.unity-base-field__label {
+    min-width: 92px;
+    color: rgb(222, 226, 232);
+}
+
+/* Numeric input boxes (slider text fields) and dropdowns render on a light theme background,
+   so their text must be dark to stay readable. */
+.unity-base-text-field__input {
+    color: rgb(20, 20, 20);
+}
+
+.unity-base-popup-field__text {
+    color: rgb(20, 20, 20);
+}
+
+.actions {
+    flex-direction: column;
+    margin-top: 4px;
+}
+
+.action {
+    height: 26px;
+    margin-top: 4px;
+}

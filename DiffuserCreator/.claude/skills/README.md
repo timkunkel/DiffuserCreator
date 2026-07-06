@@ -13,17 +13,17 @@ Working knowledge of this project for engineers and AI sessions with no prior co
 
 ## The one-paragraph model
 
-`DiffuserGrid` (a `MonoBehaviour`) spawns an `_rows × _columns` grid of `DiffuserBlock` prefab instances and delegates their depth to a **`DepthShaper`** strategy. A `DiffuserBlock` is now a *dumb* geometry object: a cube whose four front-face corners are pushed to independent depths, owning only its mesh, collider, and vertex indicators. The chosen `DepthShaper` (`CuttingDepthShaper`, `CurveDepthShaper`, or `ManualDepthShaper`, picked by the grid's `DepthSource`) computes those depths from a `DiffuserSettings` snapshot the grid builds each rebuild — `Cutting` raycasts against a `CuttingSurface` collider, `Curve` evaluates `AnimationCurve`s by the block's normalized grid position (in `Height` or `Angle` `CurveMode`), `Manual` leaves them flat. The visible wall is a sculpted relief that both scatters sound and looks intentional. A runtime **`DiffuserControlPanel`** (UI Toolkit) exposes every setting for live tweaking; meshes can be exported as OBJ / mesh `.asset` / FBX.
+`DiffuserGrid` (a `MonoBehaviour`) spawns an `_rows × _columns` grid of `DiffuserBlock` prefab instances and delegates their depth to a **`DepthShaper`** strategy. A `DiffuserBlock` is now a *dumb* geometry object: a cube whose four front-face corners are pushed to independent depths, owning only its mesh, collider, and vertex indicators. The chosen `DepthShaper` (`CuttingDepthShaper`, `CurveDepthShaper`, or `ManualDepthShaper`, picked by the grid's `DepthSource`) computes those depths from the grid's single **`DiffuserSettings`** config object — `Cutting` raycasts against a `CuttingSurface` collider, `Curve` evaluates `AnimationCurve`s by the block's normalized grid position (in `Height` or `Angle` `CurveMode`), `Manual` leaves them flat. The visible wall is a sculpted relief that both scatters sound and looks intentional. A runtime **`DiffuserControlPanel`** (UI Toolkit, laid out in `DiffuserControlPanel.uxml`) binds every setting to `grid.Settings` for live tweaking; meshes can be exported as OBJ / mesh `.asset` / FBX.
 
 ## Layer map
 
 | Layer | Files |
 |---|---|
-| Data | `DiffuserSettings.cs` (enums `HeightMode`/`DepthSource`/`CurveMode` + settings snapshot) |
+| Data | `DiffuserSettings.cs` (enums `HeightMode`/`DepthSource`/`CurveMode` + full config class) |
 | Geometry | `DiffuserBlock.cs`, `GeometryUtils.cs` |
 | Behavior | `DepthShaper.cs` (`CuttingDepthShaper`, `CurveDepthShaper`, `ManualDepthShaper`) |
-| Orchestration | `DiffuserGrid.cs` |
-| Presentation | `UI/DiffuserControlPanel.cs`, `Editor/DiffuserControlPanelSetup.cs` |
+| Orchestration | `DiffuserGrid.cs` (owns one serialized `DiffuserSettings`) |
+| Presentation | `UI/DiffuserControlPanel.cs` + `Assets/UI/DiffuserControlPanel.{uxml,uss}` + `DiffuserRuntimeTheme.tss`; `Editor/DiffuserControlPanelSetup.cs` |
 | Runtime selection | `SelectionManager.cs`, `SelectableBlock.cs`, `VertexIndicator.cs`, `CameraLookAt.cs` |
 | Export | `ObjExporterScript.cs`, `DiffuserGrid.SaveAsMesh` |
 

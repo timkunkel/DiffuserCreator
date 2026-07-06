@@ -1,0 +1,40 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="DiffuserControlPanel.uss" />
+    <ui:VisualElement name="panel" class="panel">
+        <ui:Label text="Diffuser Controls" class="title" />
+        <ui:ScrollView name="content" class="content">
+
+            <ui:Label text="GRID" class="section" />
+            <ui:SliderInt label="Rows" name="rows" low-value="1" high-value="30" show-input-field="true" />
+            <ui:SliderInt label="Columns" name="columns" low-value="1" high-value="30" show-input-field="true" />
+            <ui:Slider label="Spacing X" name="spacing-x" low-value="0" high-value="2" show-input-field="true" />
+            <ui:Slider label="Spacing Y" name="spacing-y" low-value="0" high-value="2" show-input-field="true" />
+
+            <ui:Label text="BLOCK" class="section" />
+            <ui:Slider label="Width" name="block-width" low-value="0.1" high-value="3" show-input-field="true" />
+            <ui:Slider label="Height" name="block-height" low-value="0.1" high-value="3" show-input-field="true" />
+            <ui:Slider label="Depth" name="block-depth" low-value="0.1" high-value="3" show-input-field="true" />
+
+            <ui:Label text="DEPTH" class="section" />
+            <ui:DropdownField label="Source" name="depth-source" />
+            <ui:DropdownField label="Height mode" name="height-mode" />
+            <ui:Slider label="Default depth" name="default-depth" low-value="0" high-value="3" show-input-field="true" />
+
+            <ui:Label text="CURVE" class="section" />
+            <ui:DropdownField label="Curve mode" name="curve-mode" />
+            <ui:Toggle label="Use horizontal" name="use-horizontal" />
+            <ui:Toggle label="Use vertical" name="use-vertical" />
+            <ui:Toggle label="Use diagonal" name="use-diagonal" />
+            <ui:SliderInt label="Snap angle" name="snap-angle" low-value="1" high-value="90" show-input-field="true" />
+            <ui:Label text="Curve shapes are edited on the DiffuserGrid component." class="hint" />
+
+            <ui:Label text="ACTIONS" class="section" />
+            <ui:VisualElement class="actions">
+                <ui:Button text="Regenerate" name="regenerate" class="action" />
+                <ui:Button text="Reshape" name="reshape" class="action" />
+                <ui:Button text="Print grid" name="print" class="action" />
+            </ui:VisualElement>
+
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

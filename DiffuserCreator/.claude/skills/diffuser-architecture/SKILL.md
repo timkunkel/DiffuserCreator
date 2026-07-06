@@ -1,6 +1,6 @@
 ---
 name: diffuser-architecture
-description: How DiffuserCreator turns a grid definition into a sculpted wall of diffuser blocks — the DiffuserGrid → DepthShaper → DiffuserBlock pipeline, the three depth strategies (Cutting/Curve/Manual), the DiffuserSettings snapshot, the two curve modes (Height/Angle), the runtime control panel, and the selection/handle layer. Load this BEFORE changing how blocks are generated, positioned, depth-driven, or selected, or when asking "where does depth come from" / "how do I add a new depth strategy" / "what runs at Start".
+description: How DiffuserCreator turns a grid definition into a sculpted wall of diffuser blocks — the DiffuserGrid → DepthShaper → DiffuserBlock pipeline, the three depth strategies (Cutting/Curve/Manual), the single serialized DiffuserSettings config, the two curve modes (Height/Angle), the runtime control panel, and the selection/handle layer. Load this BEFORE changing how blocks are generated, positioned, depth-driven, or selected, or when asking "where does depth come from" / "how do I add a new depth strategy" / "what runs at Start".
 ---
 
 # DiffuserCreator Architecture
@@ -23,7 +23,7 @@ DepthShaper (behavior)               Assets/Scripts/DepthShaper.cs
 DiffuserBlock (geometry)             Assets/Scripts/DiffuserBlock.cs
   └─ a dumb cube: size + 4 corner depths + mesh + collider + indicators
 DiffuserSettings (data)              Assets/Scripts/DiffuserSettings.cs
-  └─ immutable per-rebuild snapshot of the shaping parameters + the enums
+  └─ the full config (grid/block/depth/curve) + the enums; the grid owns one, serialized
 ```
 
 This is the key change from the original prototype, where `DiffuserBlock` did everything (raycasting, curve evaluation, holding grid references). The block no longer knows what a curve or a cutting surface is.
@@ -34,10 +34,10 @@ This is the key change from the original prototype, where `DiffuserBlock` did ev
 
 1. `DestroyBlocks()` — tears down any previously generated blocks.
 2. Allocates `_blocks = new DiffuserBlock[_rows, _columns]`.
-3. Computes total `Width`/`Height` from block size + spacing, centers the grid on the transform origin, and walks row-by-row placing each block. `CreateBlock(pos)` instantiates the prefab, calls `block.SetSize(w,h,d)`, and sets `block.NormalizedPosition` (the block's `[0,1]²` position in the grid, used by curve shaping).
+3. Computes total `Width`/`Height` from `_settings` (block size + spacing), centers the grid on the transform origin, and walks row-by-row placing each block. `CreateBlock(pos)` instantiates the prefab, calls `block.SetSize(w,h,d)`, and sets `block.NormalizedPosition` (the block's `[0,1]²` position in the grid, used by curve shaping).
 4. Calls `Reshape()`.
 
-`Reshape()` builds a `DiffuserSettings` via `BuildSettings()`, gets `DepthShaper.For(_depthSource)`, and calls `shaper.Shape(block, settings)` on every block. Structural changes (rows/columns/size/spacing) require `Generate()`; pure depth/curve changes only need `Reshape()` — the runtime UI wires each control to the right one.
+`Reshape()` gets `DepthShaper.For(_settings.DepthSource)` and calls `shaper.Shape(block, _settings)` on every block (the grid's one `DiffuserSettings` is passed directly — no snapshot). Structural changes (rows/columns/size/spacing) require `Generate()`; pure depth/curve changes only need `Reshape()` — the runtime UI wires each control to the right one.
 
 Derived sizes:
 - `Width  => _columns * _blockWidth  + (_columns - 1) * _horizontalSpacing`
@@ -61,20 +61,22 @@ There is no per-frame `Update`; everything is driven by `Generate`/`Reshape`, `[
 ## Curves — CurveMode Height vs Angle
 
 Both live in `CurveDepthShaper`:
-- **`Height`**: evaluate the enabled horizontal/vertical curves at the normalized position, average if both on, and set a **single flat depth** `InitialDepth + value * InitialDepth`.
+- **`Height`**: evaluate the enabled horizontal/vertical curves at the normalized position, average them, and set a **single flat depth** = `InitialDepth * clamp01(value)` — the curve value is a fraction of the block's own depth, so a block never exceeds its configured depth. With no curve enabled the block keeps full depth.
 - **`Angle`**: evaluate enabled horizontal/vertical/**diagonal** curves (diagonal at `(x+y)/2`) to a target angle, snap it to `settings.SnapAngle` degrees via ProBuilder `Snapping.Snap`, store it in `block.Angle`, then compute a two-level depth (bottom edge at `InitialDepth`, top edge deeper) so the front face **tilts** by that angle. The tilt math (line-line intersection) is owned by `diffuser-mesh-geometry`.
 
-Three independent curve toggles exist: `UseHorizontalCurve`, `UseVerticalCurve`, `UseDiagonalCurve`. (The serialized names on the grid keep the old misspelling via `[FormerlySerializedAs("UseDioganalCurve")]`/`("DioganalCurve")` — see `diffuser-build-and-run`.)
+Three independent curve toggles exist: `UseHorizontalCurve`, `UseVerticalCurve`, `UseDiagonalCurve`.
 
-## DiffuserSettings — the shaping snapshot
+## DiffuserSettings — the single source of truth
 
-`DiffuserSettings` ([DiffuserSettings.cs](../../../Assets/Scripts/DiffuserSettings.cs)) is a plain `[Serializable]` class holding `HeightMode`, `CurveMode`, the curve toggles + curves, `SnapAngle`, `CuttingLayerMask`, and `DefaultDepth`. The grid builds a fresh one each `Reshape()` (`BuildSettings()`), so shapers never reference the grid or its serialized fields — they get exactly the data they need. The enums `HeightMode`, `DepthSource`, and `CurveMode` also live in this file (top-level in the `DiffuserCreator` namespace).
+`DiffuserSettings` ([DiffuserSettings.cs](../../../Assets/Scripts/DiffuserSettings.cs)) is a `[Serializable]` class holding **all** configuration: grid (`Rows`, `Columns`, spacings), block (`BlockWidth/Height/Depth`), depth (`DepthSource`, `HeightMode`, `CuttingLayerMask`, `DefaultDepth`), and curve (`CurveMode`, the toggles + curves, `SnapAngle`). The enums `HeightMode`, `DepthSource`, `CurveMode` live here too (top-level in `DiffuserCreator`).
 
-> **Note on where settings are stored.** The grid still holds the settings as individual serialized fields (`_rows`, `_blockWidth`, `SelectedCurveMode`, the curves, …) rather than a nested settings object, because those values live in `MainScene.unity`/`DiffuserGrid.prefab` keyed by field name and nesting them would silently drop the scene overrides and authored curves. `DiffuserSettings` is a per-rebuild *snapshot* assembled from those fields, not the serialized storage. The grid exposes clean get/set **properties** (`Rows`, `BlockWidth`, `DepthSource`, `CurveMode`, …) that the UI binds to.
+`DiffuserGrid` owns exactly one, serialized: `[SerializeField] private DiffuserSettings _settings`, exposed read-only as `grid.Settings`. `Reshape()` hands `_settings` straight to the shaper (no per-rebuild snapshot). The only other serialized field on the grid is `_blockPrefab` (wiring). The `Settings` accessor is the single, deliberate way external code (the UI) reads/writes config — there is no public property/field pile anymore.
+
+> **Migration.** Config used to be flat fields on the grid (`_rows`, `SelectedCurveMode`, the curves, …) stored in `MainScene.unity`/`DiffuserGrid.prefab` by field name. Moving them into `_settings` changes their property paths, which would drop scene overrides + authored curves. `DiffuserGrid` therefore retains those exact fields as `[SerializeField, HideInInspector]` legacy and implements `ISerializationCallbackReceiver`: `OnAfterDeserialize` copies legacy → `_settings` **once** (guarded by `_migratedToSettings`, and skipped for fresh components via a `hasLegacyData` check so defaults aren't clobbered). Legacy fields are dead after every asset re-saves and can be deleted later. See `diffuser-build-and-run`.
 
 ## DiffuserControlPanel — runtime UI
 
-`DiffuserControlPanel` ([DiffuserControlPanel.cs](../../../Assets/Scripts/UI/DiffuserControlPanel.cs)) is a UI Toolkit panel (`UIDocument`) that builds sliders/toggles/enum-dropdowns/buttons in code and binds them to the grid's properties, calling `Generate()` for structural changes and `Reshape()` for shaping changes. Setup is owned by `diffuser-editor-workflows`. Curve *shapes* are still edited on the grid component in the inspector (no runtime curve editor).
+`DiffuserControlPanel` ([DiffuserControlPanel.cs](../../../Assets/Scripts/UI/DiffuserControlPanel.cs)) is a UI Toolkit panel whose layout is authored in `Assets/UI/DiffuserControlPanel.uxml` (+ `.uss`). In `Start()` it queries the named controls from the `UIDocument` root and binds them to `grid.Settings`, calling `grid.Generate()` for structural changes and `grid.Reshape()` for shaping changes. Setup/repair and the required theme are owned by `diffuser-editor-workflows`. Curve *shapes* are still edited on the grid component in the inspector (no runtime curve editor).
 
 ## Selection layer (runtime, not generation)
 
@@ -103,7 +105,7 @@ Verified 2026-07-06 against `master` HEAD `93b81d8` on Unity 6000.3.9f1 by readi
 
 ```powershell
 # Pipeline + shaper delegation
-Select-String -Path "Assets\Scripts\DiffuserGrid.cs" -Pattern "Generate|Reshape|BuildSettings|DepthShaper.For|CreateBlock"
+Select-String -Path "Assets\Scripts\DiffuserGrid.cs" -Pattern "Generate|Reshape|_settings|Settings =>|DepthShaper.For|OnAfterDeserialize"
 # Strategy factory + the three shapers
 Select-String -Path "Assets\Scripts\DepthShaper.cs" -Pattern "class .*DepthShaper|DepthShaper For|HeightMode|CurveMode"
 # Block is dumb geometry only
