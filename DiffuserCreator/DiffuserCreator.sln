@@ -5,6 +5,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RuntimeTransformHandle", "RuntimeTransformHandle.csproj", "{d42ca14d-e536-c9f4-a01c-9408fa62eff3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiffuserCreator.Papercraft", "DiffuserCreator.Papercraft.csproj", "{c16fa461-ff35-6e6e-e7a8-b92444128f20}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiffuserCreator.Papercraft.Tests", "DiffuserCreator.Papercraft.Tests.csproj", "{48948d09-fb52-ce43-f40a-b26b7a8762ad}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-Editor", "Assembly-CSharp-Editor.csproj", "{25a4b237-ff11-9846-192e-7859b726c40d}"
 EndProject
 Global
@@ -16,6 +20,10 @@ Global
 		{4fba3a20-df39-1bc6-be3b-c78a8f8000a8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{d42ca14d-e536-c9f4-a01c-9408fa62eff3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{d42ca14d-e536-c9f4-a01c-9408fa62eff3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{c16fa461-ff35-6e6e-e7a8-b92444128f20}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{c16fa461-ff35-6e6e-e7a8-b92444128f20}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48948d09-fb52-ce43-f40a-b26b7a8762ad}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48948d09-fb52-ce43-f40a-b26b7a8762ad}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25a4b237-ff11-9846-192e-7859b726c40d}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{25a4b237-ff11-9846-192e-7859b726c40d}.Debug|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR
+using System.IO;
+using DiffuserCreator.Papercraft;
 using UnityEditor;
 #endif
 
@@ -220,6 +222,41 @@ namespace DiffuserCreator
 
             AssetDatabase.CreateAsset(meshToSave, path);
             AssetDatabase.SaveAssets();
+        }
+
+        [ContextMenu("Export Papercraft")]
+        public void ExportPapercraft()
+        {
+            var meshes = new List<PapercraftMeshData>();
+            foreach (DiffuserBlock block in GetComponentsInChildren<DiffuserBlock>())
+            {
+                MeshFilter filter = block.GetComponent<MeshFilter>();
+                if (filter == null || filter.sharedMesh == null) { continue; }
+
+                Matrix4x4 gridLocal = transform.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+                meshes.Add(PapercraftMeshData.FromMesh(filter.sharedMesh, gridLocal));
+            }
+
+            if (meshes.Count == 0)
+            {
+                Debug.LogWarning("No block meshes to export - generate the grid (Play mode or Generate Grid) first.");
+                return;
+            }
+
+            string path = EditorUtility.SaveFilePanel("Export Papercraft", "", "Diffusor_papercraft", "pdf");
+            if (string.IsNullOrEmpty(path)) { return; }
+
+            PapercraftResult result = PapercraftExporter.Export(meshes, new PapercraftOptions());
+
+            File.WriteAllBytes(path, result.PdfBytes);
+            string baseName = Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path));
+            for (int i = 0; i < result.SvgPages.Length; i++)
+            {
+                File.WriteAllText($"{baseName}_page{i + 1:00}.svg", result.SvgPages[i]);
+            }
+
+            Debug.Log($"Papercraft export: {result.PieceCount} pieces on {result.Pages.Count} page(s), "
+                      + $"{result.OverlapSplitCount} overlap split(s) -> {path}");
         }
 #endif
 
