@@ -1,5 +1,8 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using DiffuserCreator.Papercraft;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -14,8 +17,18 @@ namespace DiffuserCreator.UI
     [RequireComponent(typeof(UIDocument))]
     public class DiffuserControlPanel : MonoBehaviour
     {
+        // How long export work may run per frame before yielding, so the progress bar repaints and
+        // the Cancel button stays responsive even for a large grid.
+        private const double EXPORT_FRAME_BUDGET_SECONDS = 0.016;
+
         [SerializeField]
         private DiffuserGrid _grid;
+
+        private Button      _exportButton;
+        private Button      _cancelButton;
+        private ProgressBar _exportProgress;
+        private Coroutine   _exportRoutine;
+        private bool        _cancelRequested;
 
         // Bind in Start so the UIDocument has already built its visual tree (OnEnable order between
         // the two components on the same GameObject is not guaranteed).
@@ -63,7 +76,129 @@ namespace DiffuserCreator.UI
             BindButton(root, "regenerate", _grid.Generate);
             BindButton(root, "reshape", _grid.Reshape);
             BindButton(root, "print", _grid.PrintGrid);
+
+            BindExport(root);
         }
+
+        #region Papercraft export
+
+        // Disabling the GameObject stops the coroutine implicitly; reset so a later export can start.
+        private void OnDisable()
+        {
+            if (_exportRoutine != null)
+            {
+                EndExport();
+            }
+        }
+
+        private void BindExport(VisualElement root)
+        {
+            _exportButton   = root.Q<Button>("export-papercraft");
+            _cancelButton   = root.Q<Button>("export-cancel");
+            _exportProgress = root.Q<ProgressBar>("export-progress");
+
+            if (_exportButton != null) { _exportButton.clicked += StartExport; }
+            if (_cancelButton != null) { _cancelButton.clicked += () => _cancelRequested = true; }
+
+            SetExporting(false);
+        }
+
+        private void StartExport()
+        {
+            if (_exportRoutine != null) { return; }
+
+            List<PapercraftMeshData> meshes = _grid.CollectPapercraftMeshes();
+            if (meshes.Count == 0)
+            {
+                Debug.LogWarning("Papercraft: no block meshes to export; generate the grid first.");
+                return;
+            }
+
+            _exportRoutine = StartCoroutine(ExportRoutine(meshes));
+        }
+
+        private IEnumerator ExportRoutine(List<PapercraftMeshData> meshes)
+        {
+            _cancelRequested = false;
+            SetExporting(true);
+            UpdateProgress(0f, "Preparing");
+            yield return null;
+
+            var         job   = new PapercraftJob(meshes, new PapercraftOptions());
+            IEnumerator steps = job.Run().GetEnumerator();
+
+            bool more = true;
+            while (more)
+            {
+                double frameStart = Time.realtimeSinceStartupAsDouble;
+                while (more && !_cancelRequested
+                       && Time.realtimeSinceStartupAsDouble - frameStart < EXPORT_FRAME_BUDGET_SECONDS)
+                {
+                    more = steps.MoveNext();
+                }
+
+                UpdateProgress(job.Progress, job.Status);
+
+                if (_cancelRequested)
+                {
+                    Debug.Log("Papercraft export cancelled.");
+                    EndExport();
+                    yield break;
+                }
+
+                yield return null;
+            }
+
+            SaveResult(job.Result);
+            EndExport();
+        }
+
+        private void SaveResult(PapercraftResult result)
+        {
+            if (result == null) { return; }
+
+            string path = ResolveSavePath();
+            if (string.IsNullOrEmpty(path)) { return; }
+
+            PapercraftFiles.Write(result, path);
+            Debug.Log($"Papercraft export: {result.PieceCount} piece(s) on {result.Pages.Count} page(s), "
+                      + $"{result.OverlapSplitCount} overlap split(s) -> {path}");
+        }
+
+        private static string ResolveSavePath()
+        {
+#if UNITY_EDITOR
+            return UnityEditor.EditorUtility.SaveFilePanel("Export Papercraft", "", "Diffusor_papercraft", "pdf");
+#else
+            string directory = System.IO.Path.Combine(Application.persistentDataPath, "Papercraft");
+            System.IO.Directory.CreateDirectory(directory);
+            return System.IO.Path.Combine(directory, $"Diffusor_papercraft_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+#endif
+        }
+
+        private void UpdateProgress(float progress, string status)
+        {
+            if (_exportProgress == null) { return; }
+
+            _exportProgress.value = Mathf.Clamp01(progress) * 100f;
+            _exportProgress.title = status;
+        }
+
+        private void SetExporting(bool exporting)
+        {
+            if (_exportButton != null) { _exportButton.SetEnabled(!exporting); }
+            if (_cancelButton != null) { _cancelButton.style.display = exporting ? DisplayStyle.Flex : DisplayStyle.None; }
+            if (_exportProgress != null) { _exportProgress.style.display = exporting ? DisplayStyle.Flex : DisplayStyle.None; }
+        }
+
+        private void EndExport()
+        {
+            SetExporting(false);
+            _cancelRequested = false;
+            _exportRoutine   = null;
+        }
+
+        #endregion
 
         #region Binding helpers
 

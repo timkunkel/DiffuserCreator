@@ -35,6 +35,13 @@
                 <ui:Button text="Print grid" name="print" class="action" />
             </ui:VisualElement>
 
+            <ui:Label text="EXPORT" class="section" />
+            <ui:VisualElement class="actions">
+                <ui:Button text="Export papercraft" name="export-papercraft" class="action" />
+                <ui:ProgressBar name="export-progress" title="" low-value="0" high-value="100" class="export-progress" />
+                <ui:Button text="Cancel" name="export-cancel" class="action cancel" />
+            </ui:VisualElement>
+
         </ui:ScrollView>
     </ui:VisualElement>
 </ui:UXML>

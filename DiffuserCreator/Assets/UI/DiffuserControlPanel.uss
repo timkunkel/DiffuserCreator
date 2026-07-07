@@ -64,3 +64,12 @@
     height: 26px;
     margin-top: 4px;
 }
+
+.export-progress {
+    margin-top: 6px;
+    min-height: 20px;
+}
+
+.cancel {
+    background-color: rgb(120, 45, 45);
+}

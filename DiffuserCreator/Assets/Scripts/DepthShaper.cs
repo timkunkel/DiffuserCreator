@@ -129,6 +129,8 @@ namespace DiffuserCreator
             // deeper than its configured depth. With no curve enabled the block keeps full depth.
             float fraction = count > 0 ? Mathf.Clamp01(value / count) : 1f;
 
+            fraction = value * 0.1f;
+
             block.Angle = 0;
             block.SetUniformDepth(block.InitialDepth * fraction);
         }

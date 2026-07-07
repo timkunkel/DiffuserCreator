@@ -47,12 +47,14 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.3.9f1\Editor\Data\Tools\BuildPipeline\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\Papercraft\PapercraftFiles.cs" />
     <Compile Include="Assets\Scripts\Papercraft\PapercraftModel.cs" />
     <Compile Include="Assets\Scripts\Papercraft\PdfRenderer.cs" />
     <Compile Include="Assets\Scripts\Papercraft\SvgRenderer.cs" />
     <Compile Include="Assets\Scripts\Papercraft\PapercraftOptions.cs" />
     <Compile Include="Assets\Scripts\Papercraft\PieceDrawing.cs" />
     <Compile Include="Assets\Scripts\Papercraft\Unfolder.cs" />
+    <Compile Include="Assets\Scripts\Papercraft\PapercraftJob.cs" />
     <Compile Include="Assets\Scripts\Papercraft\SpanningTreeBuilder.cs" />
     <Compile Include="Assets\Scripts\Papercraft\PapercraftPage.cs" />
     <Compile Include="Assets\Scripts\Papercraft\PageLayout.cs" />

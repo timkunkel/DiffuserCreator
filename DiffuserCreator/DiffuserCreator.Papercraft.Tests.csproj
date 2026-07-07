@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="Assets\Tests\EditMode\OverlapTests.cs" />
     <Compile Include="Assets\Tests\EditMode\SpanningTreeTests.cs" />
+    <Compile Include="Assets\Tests\EditMode\PapercraftJobTests.cs" />
     <Compile Include="Assets\Tests\EditMode\UnfolderTests.cs" />
     <Compile Include="Assets\Tests\EditMode\PapercraftTestMeshes.cs" />
     <Compile Include="Assets\Tests\EditMode\PapercraftModelTests.cs" />

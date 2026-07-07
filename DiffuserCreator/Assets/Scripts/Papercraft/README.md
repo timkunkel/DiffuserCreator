@@ -41,8 +41,36 @@ result.PdfBytes;  // byte[]   — one multi-page PDF
 pages with continuous label numbering. `PapercraftMeshData.FromMesh(mesh, matrix)` bakes a
 transform (and fixes winding on a mirrored matrix).
 
-In the editor, `DiffuserGrid` ▸ context menu ▸ **Export Papercraft** exports every block in the
-grid to a PDF plus per-page SVGs.
+### Progress + cancellation
+
+`PapercraftExporter.Export` runs synchronously. For a progress bar and a cancel button, drive a
+`PapercraftJob` incrementally instead — each `MoveNext` on `Run()` does one chunk of work (one
+mesh, one page, or the final render) and updates `Progress` (0..1) and `Status`. Cancel by simply
+not enumerating further; `Result` stays `null` until the job finishes.
+
+```csharp
+var job   = new PapercraftJob(meshes, options);
+var steps = job.Run().GetEnumerator();
+while (steps.MoveNext())
+{
+    ShowProgress(job.Progress, job.Status);
+    if (cancelled) { break; }   // Result stays null
+}
+if (job.IsDone) { PapercraftFiles.Write(job.Result, path); }
+```
+
+`PapercraftFiles.Write(result, pdfPath)` writes the PDF plus one SVG per page beside it.
+
+### Entry points in this project
+
+- **Runtime control panel** (`DiffuserControlPanel`): the EXPORT section has an *Export papercraft*
+  button, a `ProgressBar`, and a *Cancel* button. The panel runs the job as a time-sliced
+  coroutine so the bar repaints and Cancel stays responsive on large grids; it saves via an editor
+  Save-File dialog in Play mode and to `Application.persistentDataPath/Papercraft/` in a build.
+- **Editor context menu**: `DiffuserGrid` ▸ **Export Papercraft** (synchronous, Save-File dialog).
+
+Both feed `DiffuserGrid.CollectPapercraftMeshes()`, which bakes every block mesh into grid-local
+space.
 
 ## Tests
 
