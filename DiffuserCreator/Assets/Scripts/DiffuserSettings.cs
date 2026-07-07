@@ -46,6 +46,9 @@ namespace DiffuserCreator
         public float BlockHeight = 1f;
         public float BlockDepth  = 1f;
 
+        // When set, Width/Height/Depth are kept equal (the UI mirrors any change across all three).
+        public bool UniformBlockSize;
+
         #endregion
 
         #region Depth
@@ -60,6 +63,10 @@ namespace DiffuserCreator
         #region Curve
 
         public CurveMode CurveMode = CurveMode.Height;
+
+        // Height-mode only: blends between full block depth (0, curve ignored) and the full
+        // curve-driven depth (1). See CurveDepthShaper.ShapeWithHeight.
+        [Range(0f, 1f)] public float CurveHeightInfluence = 1f;
 
         public bool           UseHorizontalCurve;
         public AnimationCurve HorizontalCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);

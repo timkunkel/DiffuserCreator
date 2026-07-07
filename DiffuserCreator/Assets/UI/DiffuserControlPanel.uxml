@@ -11,6 +11,7 @@
             <ui:Slider label="Spacing Y" name="spacing-y" low-value="0" high-value="2" show-input-field="true" />
 
             <ui:Label text="BLOCK" class="section" />
+            <ui:Toggle label="Uniform size" name="uniform-size" />
             <ui:Slider label="Width" name="block-width" low-value="0.1" high-value="3" show-input-field="true" />
             <ui:Slider label="Height" name="block-height" low-value="0.1" high-value="3" show-input-field="true" />
             <ui:Slider label="Depth" name="block-depth" low-value="0.1" high-value="3" show-input-field="true" />
@@ -20,13 +21,16 @@
             <ui:DropdownField label="Height mode" name="height-mode" />
             <ui:Slider label="Default depth" name="default-depth" low-value="0" high-value="3" show-input-field="true" />
 
-            <ui:Label text="CURVE" class="section" />
-            <ui:DropdownField label="Curve mode" name="curve-mode" />
-            <ui:Toggle label="Use horizontal" name="use-horizontal" />
-            <ui:Toggle label="Use vertical" name="use-vertical" />
-            <ui:Toggle label="Use diagonal" name="use-diagonal" />
-            <ui:SliderInt label="Snap angle" name="snap-angle" low-value="1" high-value="90" show-input-field="true" />
-            <ui:Label text="Curve shapes are edited on the DiffuserGrid component." class="hint" />
+            <ui:VisualElement name="curve-section">
+                <ui:Label text="CURVE" class="section" />
+                <ui:DropdownField label="Curve mode" name="curve-mode" />
+                <ui:Slider label="Height influence" name="curve-height-influence" low-value="0" high-value="1" show-input-field="true" />
+                <ui:Toggle label="Use horizontal" name="use-horizontal" />
+                <ui:Toggle label="Use vertical" name="use-vertical" />
+                <ui:Toggle label="Use diagonal" name="use-diagonal" />
+                <ui:SliderInt label="Snap angle" name="snap-angle" low-value="1" high-value="90" show-input-field="true" />
+                <ui:Label text="Curve shapes are edited on the DiffuserGrid component." class="hint" />
+            </ui:VisualElement>
 
             <ui:Label text="ACTIONS" class="section" />
             <ui:VisualElement class="actions">

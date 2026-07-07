@@ -61,14 +61,14 @@ There is no per-frame `Update`; everything is driven by `Generate`/`Reshape`, `[
 ## Curves — CurveMode Height vs Angle
 
 Both live in `CurveDepthShaper`:
-- **`Height`**: evaluate the enabled horizontal/vertical curves at the normalized position, average them, and set a **single flat depth** = `InitialDepth * clamp01(value)` — the curve value is a fraction of the block's own depth, so a block never exceeds its configured depth. With no curve enabled the block keeps full depth.
+- **`Height`**: evaluate the enabled horizontal/vertical/**diagonal** curves at the normalized position (diagonal at `(x+y)/2`, same inputs as Angle mode). Each sample is **normalized to that curve's own min/max key value** (`NormalizedCurveValue` → `InverseLerp`), so a curve authored in any range — e.g. degree-scale values shared with Angle mode — still maps to a `0..1` height fraction instead of clamping flat. Average those to a fraction of the block's own depth, then blend by `CurveHeightInfluence` (`Mathf.Lerp(1, fraction, influence)`): influence `0` keeps full depth (curve ignored), `1` applies the full curve-driven depth. Sets a **single flat depth** = `InitialDepth * blended`, so a block never exceeds its configured depth. With no curve enabled the block keeps full depth.
 - **`Angle`**: evaluate enabled horizontal/vertical/**diagonal** curves (diagonal at `(x+y)/2`) to a target angle, snap it to `settings.SnapAngle` degrees via ProBuilder `Snapping.Snap`, store it in `block.Angle`, then compute a two-level depth (bottom edge at `InitialDepth`, top edge deeper) so the front face **tilts** by that angle. The tilt math (line-line intersection) is owned by `diffuser-mesh-geometry`.
 
 Three independent curve toggles exist: `UseHorizontalCurve`, `UseVerticalCurve`, `UseDiagonalCurve`.
 
 ## DiffuserSettings — the single source of truth
 
-`DiffuserSettings` ([DiffuserSettings.cs](../../../Assets/Scripts/DiffuserSettings.cs)) is a `[Serializable]` class holding **all** configuration: grid (`Rows`, `Columns`, spacings), block (`BlockWidth/Height/Depth`), depth (`DepthSource`, `HeightMode`, `CuttingLayerMask`, `DefaultDepth`), and curve (`CurveMode`, the toggles + curves, `SnapAngle`). The enums `HeightMode`, `DepthSource`, `CurveMode` live here too (top-level in `DiffuserCreator`).
+`DiffuserSettings` ([DiffuserSettings.cs](../../../Assets/Scripts/DiffuserSettings.cs)) is a `[Serializable]` class holding **all** configuration: grid (`Rows`, `Columns`, spacings), block (`BlockWidth/Height/Depth`, `UniformBlockSize`), depth (`DepthSource`, `HeightMode`, `CuttingLayerMask`, `DefaultDepth`), and curve (`CurveMode`, `CurveHeightInfluence`, the toggles + curves, `SnapAngle`). The enums `HeightMode`, `DepthSource`, `CurveMode` live here too (top-level in `DiffuserCreator`).
 
 `DiffuserGrid` owns exactly one, serialized: `[SerializeField] private DiffuserSettings _settings`, exposed read-only as `grid.Settings`. `Reshape()` hands `_settings` straight to the shaper (no per-rebuild snapshot). The only other serialized field on the grid is `_blockPrefab` (wiring). The `Settings` accessor is the single, deliberate way external code (the UI) reads/writes config — there is no public property/field pile anymore.
 

@@ -24,6 +24,12 @@ namespace DiffuserCreator.UI
         [SerializeField]
         private DiffuserGrid _grid;
 
+        private Slider        _blockWidth;
+        private Slider        _blockHeight;
+        private Slider        _blockDepth;
+        private Slider        _curveHeightInfluence;
+        private VisualElement _curveSection;
+
         private Button      _exportButton;
         private Button      _cancelButton;
         private ProgressBar _exportProgress;
@@ -59,15 +65,26 @@ namespace DiffuserCreator.UI
             BindFloatSlider(root, "spacing-x", settings.HorizontalSpacing, value => { settings.HorizontalSpacing = value; _grid.Generate(); });
             BindFloatSlider(root, "spacing-y", settings.VerticalSpacing, value => { settings.VerticalSpacing = value; _grid.Generate(); });
 
-            BindFloatSlider(root, "block-width", settings.BlockWidth, value => { settings.BlockWidth = value; _grid.Generate(); });
-            BindFloatSlider(root, "block-height", settings.BlockHeight, value => { settings.BlockHeight = value; _grid.Generate(); });
-            BindFloatSlider(root, "block-depth", settings.BlockDepth, value => { settings.BlockDepth = value; _grid.Generate(); });
+            BindBlockSize(root, settings);
 
-            BindEnum<DepthSource>(root, "depth-source", settings.DepthSource, value => { settings.DepthSource = value; _grid.Reshape(); });
+            _curveSection = root.Q<VisualElement>("curve-section");
+            BindEnum<DepthSource>(root, "depth-source", settings.DepthSource, value =>
+            {
+                settings.DepthSource = value;
+                UpdateCurveSectionVisibility(value);
+                _grid.Reshape();
+            });
+            UpdateCurveSectionVisibility(settings.DepthSource);
             BindEnum<HeightMode>(root, "height-mode", settings.HeightMode, value => { settings.HeightMode = value; _grid.Reshape(); });
             BindFloatSlider(root, "default-depth", settings.DefaultDepth, value => { settings.DefaultDepth = value; _grid.Reshape(); });
 
-            BindEnum<CurveMode>(root, "curve-mode", settings.CurveMode, value => { settings.CurveMode = value; _grid.Reshape(); });
+            BindEnum<CurveMode>(root, "curve-mode", settings.CurveMode, value =>
+            {
+                settings.CurveMode = value;
+                UpdateCurveHeightInfluenceVisibility(value);
+                _grid.Reshape();
+            });
+            BindCurveHeightInfluence(root, settings);
             BindToggle(root, "use-horizontal", settings.UseHorizontalCurve, value => { settings.UseHorizontalCurve = value; _grid.Reshape(); });
             BindToggle(root, "use-vertical", settings.UseVerticalCurve, value => { settings.UseVerticalCurve = value; _grid.Reshape(); });
             BindToggle(root, "use-diagonal", settings.UseDiagonalCurve, value => { settings.UseDiagonalCurve = value; _grid.Reshape(); });
@@ -79,6 +96,99 @@ namespace DiffuserCreator.UI
 
             BindExport(root);
         }
+
+        #region Block size
+
+        private void BindBlockSize(VisualElement root, DiffuserSettings settings)
+        {
+            _blockWidth  = root.Q<Slider>("block-width");
+            _blockHeight = root.Q<Slider>("block-height");
+            _blockDepth  = root.Q<Slider>("block-depth");
+
+            _blockWidth?.SetValueWithoutNotify(settings.BlockWidth);
+            _blockHeight?.SetValueWithoutNotify(settings.BlockHeight);
+            _blockDepth?.SetValueWithoutNotify(settings.BlockDepth);
+
+            _blockWidth?.RegisterValueChangedCallback(evt =>
+            {
+                settings.BlockWidth = evt.newValue;
+                if (settings.UniformBlockSize) { ApplyUniformBlockSize(settings, evt.newValue); }
+                _grid.Generate();
+            });
+            _blockHeight?.RegisterValueChangedCallback(evt =>
+            {
+                settings.BlockHeight = evt.newValue;
+                if (settings.UniformBlockSize) { ApplyUniformBlockSize(settings, evt.newValue); }
+                _grid.Generate();
+            });
+            _blockDepth?.RegisterValueChangedCallback(evt =>
+            {
+                settings.BlockDepth = evt.newValue;
+                if (settings.UniformBlockSize) { ApplyUniformBlockSize(settings, evt.newValue); }
+                _grid.Generate();
+            });
+
+            BindToggle(root, "uniform-size", settings.UniformBlockSize, value =>
+            {
+                settings.UniformBlockSize = value;
+                if (value)
+                {
+                    ApplyUniformBlockSize(settings, settings.BlockWidth);
+                    _grid.Generate();
+                }
+            });
+        }
+
+        // Force width = height = depth and mirror the value on all three sliders without re-firing
+        // their change callbacks.
+        private void ApplyUniformBlockSize(DiffuserSettings settings, float value)
+        {
+            settings.BlockWidth  = value;
+            settings.BlockHeight = value;
+            settings.BlockDepth  = value;
+
+            _blockWidth?.SetValueWithoutNotify(value);
+            _blockHeight?.SetValueWithoutNotify(value);
+            _blockDepth?.SetValueWithoutNotify(value);
+        }
+
+        #endregion
+
+        #region Curve height influence
+
+        private void BindCurveHeightInfluence(VisualElement root, DiffuserSettings settings)
+        {
+            _curveHeightInfluence = root.Q<Slider>("curve-height-influence");
+            if (_curveHeightInfluence != null)
+            {
+                _curveHeightInfluence.SetValueWithoutNotify(settings.CurveHeightInfluence);
+                _curveHeightInfluence.RegisterValueChangedCallback(evt =>
+                {
+                    settings.CurveHeightInfluence = evt.newValue;
+                    _grid.Reshape();
+                });
+            }
+
+            UpdateCurveHeightInfluenceVisibility(settings.CurveMode);
+        }
+
+        // The influence only affects Height curve mode, so hide it in Angle mode.
+        private void UpdateCurveHeightInfluenceVisibility(CurveMode mode)
+        {
+            if (_curveHeightInfluence == null) { return; }
+
+            _curveHeightInfluence.style.display = mode == CurveMode.Height ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        // The whole curve section only applies when the depth source is Curve.
+        private void UpdateCurveSectionVisibility(DepthSource source)
+        {
+            if (_curveSection == null) { return; }
+
+            _curveSection.style.display = source == DepthSource.Curve ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        #endregion
 
         #region Papercraft export
 

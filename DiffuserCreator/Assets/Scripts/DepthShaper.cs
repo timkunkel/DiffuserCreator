@@ -113,26 +113,59 @@ namespace DiffuserCreator
             float   value = 0f;
             int     count = 0;
 
+            // Sample the same three curves Angle mode does (diagonal at (x+y)/2), so enabling any
+            // single curve toggle drives Height mode too. Each sample is normalized to that curve's
+            // own min/max output, so curves authored for Angle mode (degree-scale values) still map
+            // to a 0..1 height fraction instead of clamping flat.
+            if (settings.UseDiagonalCurve)
+            {
+                value += NormalizedCurveValue(settings.DiagonalCurve, (pos.x + pos.y) / 2f);
+                count++;
+            }
+
             if (settings.UseHorizontalCurve)
             {
-                value += settings.HorizontalCurve.Evaluate(pos.x);
+                value += NormalizedCurveValue(settings.HorizontalCurve, pos.x);
                 count++;
             }
 
             if (settings.UseVerticalCurve)
             {
-                value += settings.VerticalCurve.Evaluate(pos.y);
+                value += NormalizedCurveValue(settings.VerticalCurve, pos.y);
                 count++;
             }
 
-            // The curve value is a fraction of the block's own depth (0..1), so a block never gets
-            // deeper than its configured depth. With no curve enabled the block keeps full depth.
-            float fraction = count > 0 ? Mathf.Clamp01(value / count) : 1f;
-
-            fraction = value * 0.1f;
+            // Per-block height: the curves are sampled at THIS block's normalized grid position
+            // (pos), so each block gets its own 0..1 fraction of the block depth and the wall varies
+            // across the grid. With no curve enabled every block keeps full depth. Then
+            // CurveHeightInfluence blends between full depth (0, curve ignored) and the curve
+            // result (1), so a block never exceeds its configured depth.
+            float curveFraction = count > 0 ? Mathf.Clamp01(value / count) : 1f;
+            float influence     = Mathf.Clamp01(settings.CurveHeightInfluence);
+            float fraction      = Mathf.Lerp(1f, curveFraction, influence);
 
             block.Angle = 0;
             block.SetUniformDepth(block.InitialDepth * fraction);
+        }
+
+        // Curve output at `time` mapped to 0..1 across the curve's own min/max key values. This lets
+        // a curve authored in any range (e.g. degrees for Angle mode) still produce per-block height
+        // variation; a flat curve (no range) contributes a constant, i.e. no variation.
+        private static float NormalizedCurveValue(AnimationCurve curve, float time)
+        {
+            Keyframe[] keys = curve.keys;
+            if (keys.Length == 0) { return 1f; }
+
+            float min = keys[0].value;
+            float max = keys[0].value;
+            for (int i = 1; i < keys.Length; i++)
+            {
+                min = Mathf.Min(min, keys[i].value);
+                max = Mathf.Max(max, keys[i].value);
+            }
+
+            float sample = curve.Evaluate(time);
+            return Mathf.Approximately(max, min) ? Mathf.Clamp01(sample) : Mathf.InverseLerp(min, max, sample);
         }
 
         private static void ShapeWithAngle(DiffuserBlock block, DiffuserSettings settings)

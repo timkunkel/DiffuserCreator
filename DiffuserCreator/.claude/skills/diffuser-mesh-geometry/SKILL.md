@@ -67,7 +67,7 @@ The tilt math lives in `CurveDepthShaper.ShapeWithAngle` ([DepthShaper.cs](../..
 
 `GeometryUtils.LineLineIntersection` ([GeometryUtils.cs](../../../Assets/Scripts/GeometryUtils.cs)) is a standard coplanar-lines solver: returns false (and `Vector3.zero`) when the lines are parallel or non-coplanar (`|planarFactor| >= 0.0001` or near-zero cross product).
 
-`CurveDepthShaper.ShapeWithHeight` is the easy sibling: one flat depth `InitialDepth * clamp01(value)` (the curve value is a fraction of the block's depth), no geometry.
+`CurveDepthShaper.ShapeWithHeight` is the easy sibling: one flat depth `InitialDepth * Lerp(1, curveFraction, CurveHeightInfluence)`, where `curveFraction` is the enabled curves averaged after each is normalized to its own min/max (`NormalizedCurveValue`, so degree-scale curves shared with Angle mode still vary the height), blended toward full depth by the influence — no geometry.
 
 ## Vertex indicators
 
