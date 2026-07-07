@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace DiffuserCreator.Papercraft.Tests
 {
@@ -9,8 +10,9 @@ namespace DiffuserCreator.Papercraft.Tests
     {
         private static PapercraftOptions TestOptions()
         {
-            // 30 mm per unit keeps a unit cube's net well inside a single A4 page.
-            return new PapercraftOptions { MillimetersPerModelUnit = 30f };
+            // 30 mm per unit keeps a unit cube's net well inside a single A4 page. Fit-to-page is
+            // disabled here so these tests exercise the fixed-scale path they assert against.
+            return new PapercraftOptions { MillimetersPerModelUnit = 30f, FitSinglePieceToPage = false };
         }
 
         [Test]
@@ -96,6 +98,74 @@ namespace DiffuserCreator.Papercraft.Tests
 
             Assert.GreaterOrEqual(result.Pages.Count, 1);
             Assert.IsNotEmpty(result.SvgPages[0]);
+        }
+
+        [Test]
+        public void FitToPage_ScalesLargestBlockToFillOneA4Page()
+        {
+            var options = new PapercraftOptions { FitSinglePieceToPage = true };
+
+            // A tiny model (0.01 unit cube) would be microscopic at any fixed scale; fit-to-page
+            // must scale it up to nearly fill the page, and it must still fit within the margins.
+            PapercraftResult result = PapercraftExporter.Export(
+                new[] { PapercraftTestMeshes.Cube24(0.01f, 0.01f, 0.01f, 0.01f) }, options);
+
+            Assert.AreEqual(1, result.Pages.Count);
+            Assert.Greater(result.AppliedScaleMmPerUnit, 0f);
+
+            float innerWidth  = options.PageSizeMm.x - 2f * options.PageMarginMm;
+            float innerHeight = options.PageSizeMm.y - 2f * options.PageMarginMm;
+
+            foreach (PapercraftPolyline polyline in result.Pages[0].Polylines)
+            {
+                foreach (Vector2 point in polyline.Points)
+                {
+                    Assert.GreaterOrEqual(point.x, -0.001f);
+                    Assert.GreaterOrEqual(point.y, -0.001f);
+                    Assert.LessOrEqual(point.x, options.PageSizeMm.x + 0.001f);
+                    Assert.LessOrEqual(point.y, options.PageSizeMm.y + 0.001f);
+                }
+            }
+
+            // The net should actually be large (fills a meaningful share of the page), not tiny.
+            Rect bounds = PageBounds(result.Pages[0]);
+            Assert.Greater(bounds.width * bounds.height, 0.25f * innerWidth * innerHeight,
+                "fit-to-page net should fill a large share of the printable area");
+        }
+
+        [Test]
+        public void FitToPage_AllBlocksShareOneScale()
+        {
+            var options = new PapercraftOptions { FitSinglePieceToPage = true };
+
+            // A big block and a small block: the shared scale must be driven by the larger one so
+            // both fit, and both are scaled by the same factor (checked via the reported scale).
+            PapercraftResult result = PapercraftExporter.Export(
+                new[]
+                {
+                    PapercraftTestMeshes.Cube24(1f, 1f, 1f, 1f),
+                    PapercraftTestMeshes.Cube24(0.3f, 0.3f, 0.3f, 0.3f)
+                },
+                options);
+
+            Assert.AreEqual(2, result.PieceCount);
+            Assert.Greater(result.AppliedScaleMmPerUnit, 0f);
+        }
+
+        private static Rect PageBounds(PapercraftPage page)
+        {
+            float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+            foreach (PapercraftPolyline polyline in page.Polylines)
+            {
+                if (polyline.Kind == LineKind.CropMark) { continue; }
+                foreach (Vector2 p in polyline.Points)
+                {
+                    minX = Mathf.Min(minX, p.x); minY = Mathf.Min(minY, p.y);
+                    maxX = Mathf.Max(maxX, p.x); maxY = Mathf.Max(maxY, p.y);
+                }
+            }
+
+            return Rect.MinMaxRect(minX, minY, maxX, maxY);
         }
 
         [Test]

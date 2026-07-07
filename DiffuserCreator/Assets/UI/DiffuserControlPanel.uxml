@@ -40,6 +40,7 @@
             </ui:VisualElement>
 
             <ui:Label text="EXPORT" class="section" />
+            <ui:Toggle label="Fit block to A4 page" name="export-fit-page" value="true" />
             <ui:VisualElement class="actions">
                 <ui:Button text="Export papercraft" name="export-papercraft" class="action" />
                 <ui:ProgressBar name="export-progress" title="" low-value="0" high-value="100" class="export-progress" />

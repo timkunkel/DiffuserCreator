@@ -7,7 +7,7 @@ namespace DiffuserCreator.Papercraft.Tests
     {
         private static PapercraftOptions TestOptions()
         {
-            return new PapercraftOptions { MillimetersPerModelUnit = 30f };
+            return new PapercraftOptions { MillimetersPerModelUnit = 30f, FitSinglePieceToPage = false };
         }
 
         [Test]

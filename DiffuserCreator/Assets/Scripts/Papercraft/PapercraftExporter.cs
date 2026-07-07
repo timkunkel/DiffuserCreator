@@ -42,6 +42,7 @@ namespace DiffuserCreator.Papercraft
         public byte[]               PdfBytes;
         public int                  PieceCount;
         public int                  OverlapSplitCount;
+        public float                AppliedScaleMmPerUnit;
     }
 
     // Facade over the whole pipeline: welded polygon model -> dual-graph spanning tree ->

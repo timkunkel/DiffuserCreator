@@ -32,6 +32,7 @@ namespace DiffuserCreator.UI
 
         private Button      _exportButton;
         private Button      _cancelButton;
+        private Toggle      _fitToPage;
         private ProgressBar _exportProgress;
         private Coroutine   _exportRoutine;
         private bool        _cancelRequested;
@@ -206,6 +207,7 @@ namespace DiffuserCreator.UI
             _exportButton   = root.Q<Button>("export-papercraft");
             _cancelButton   = root.Q<Button>("export-cancel");
             _exportProgress = root.Q<ProgressBar>("export-progress");
+            _fitToPage      = root.Q<Toggle>("export-fit-page");
 
             if (_exportButton != null) { _exportButton.clicked += StartExport; }
             if (_cancelButton != null) { _cancelButton.clicked += () => _cancelRequested = true; }
@@ -234,7 +236,8 @@ namespace DiffuserCreator.UI
             UpdateProgress(0f, "Preparing");
             yield return null;
 
-            var         job   = new PapercraftJob(meshes, new PapercraftOptions());
+            var options = new PapercraftOptions { FitSinglePieceToPage = _fitToPage?.value ?? true };
+            var job     = new PapercraftJob(meshes, options);
             IEnumerator steps = job.Run().GetEnumerator();
 
             bool more = true;
@@ -271,7 +274,8 @@ namespace DiffuserCreator.UI
             if (string.IsNullOrEmpty(path)) { return; }
 
             PapercraftFiles.Write(result, path);
-            Debug.Log($"Papercraft export: {result.PieceCount} piece(s) on {result.Pages.Count} page(s), "
+            Debug.Log($"Papercraft export: {result.PieceCount} piece(s) on {result.Pages.Count} page(s) "
+                      + $"at {result.AppliedScaleMmPerUnit:0.#} mm/unit, "
                       + $"{result.OverlapSplitCount} overlap split(s) -> {path}");
         }
 

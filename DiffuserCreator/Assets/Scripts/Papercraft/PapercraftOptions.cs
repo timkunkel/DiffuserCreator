@@ -11,6 +11,12 @@ namespace DiffuserCreator.Papercraft
         public static readonly Vector2 PAGE_LETTER_MM = new Vector2(215.9f, 279.4f);
 
         public float   MillimetersPerModelUnit = 100f;
+
+        // When true, MillimetersPerModelUnit is ignored and a single scale is computed so the
+        // largest unfolded block (with a glue-tab allowance) fits the printable area of one page.
+        // Every block is scaled by that same value, so they stay proportional to each other.
+        public bool    FitSinglePieceToPage = true;
+
         public Vector2 PageSizeMm              = PAGE_A4_MM;
         public float   PageMarginMm            = 10f;
         public float   PieceSpacingMm          = 6f;

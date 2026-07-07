@@ -260,7 +260,8 @@ namespace DiffuserCreator
             PapercraftResult result = PapercraftExporter.Export(meshes, new PapercraftOptions());
             PapercraftFiles.Write(result, path);
 
-            Debug.Log($"Papercraft export: {result.PieceCount} pieces on {result.Pages.Count} page(s), "
+            Debug.Log($"Papercraft export: {result.PieceCount} pieces on {result.Pages.Count} page(s) "
+                      + $"at {result.AppliedScaleMmPerUnit:0.#} mm/unit, "
                       + $"{result.OverlapSplitCount} overlap split(s) -> {path}");
         }
 #endif
